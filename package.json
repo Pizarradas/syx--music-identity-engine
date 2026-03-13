@@ -1,0 +1,14 @@
+{
+  "name": "syx-music-identity-engine",
+  "version": "1.0.0",
+  "description": "Motor de identidad musical — análisis de audio, semántica y visualización",
+  "type": "module",
+  "scripts": {
+    "serve": "npx serve -l 3000",
+    "start": "npx serve -l 3000",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "meyda": "^5.6.3"
+  }
+}
