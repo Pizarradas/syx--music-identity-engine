@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es" data-syx-theme="example-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SYX Music Identity Engine: analiza canciones y genera datos visuales en tiempo real, entroncados con la música. Descarga el mapa completo en JSON.">
+  <title>SYX Music Identity Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Outfit:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link id="syx-theme-css" rel="stylesheet" href="/syx-ui/css/styles-theme-example-01.css">
+  <link rel="stylesheet" href="/syx-ui/css/styles-music-app.css">
+  <link rel="stylesheet" href="/syx-ui/css/styles-dashboard-widgets.css">
+</head>
+<body class="syx syx--theme-example-01 org-app">
+  <a href="#main-content" class="org-app-skip">Saltar al contenido</a>
+  <div class="org-app-canvas" id="scene-container">
+    <div class="org-organic-bg" id="organic-bg" aria-hidden="true">
+      <div class="org-organic-bg__gradient"></div>
+      <div class="org-organic-bg__lateral" aria-hidden="true"></div>
+      <div class="org-organic-particles" id="organic-particles" aria-hidden="true"></div>
+      <div class="org-organic-shapes">
+        <div class="org-organic-blob org-organic-blob--1"></div>
+        <div class="org-organic-blob org-organic-blob--2"></div>
+        <div class="org-organic-blob org-organic-blob--3"></div>
+        <div class="org-organic-blob org-organic-blob--4"></div>
+      </div>
+    </div>
+    <div class="org-ripple-overlay" id="ripple-overlay" aria-hidden="true"></div>
+    <div class="org-flash-overlay" id="flash-overlay" aria-hidden="true"></div>
+  </div>
+  <div class="org-music-dashboard__spectrum org-music-dashboard__spectrum--bg org-music-dashboard__spectrum--hidden" id="spectrum-bars" aria-hidden="true"></div>
+
+  <button type="button" class="org-app-fullscreen-exit" id="btn-fullscreen-exit" aria-label="Salir de pantalla completa (F)" title="Salir de pantalla completa (F)">
+    <i data-lucide="minimize-2"></i> Salir
+  </button>
+
+  <div class="org-app-overlay">
+    <header class="org-app-header" role="banner">
+      <div class="org-app-header__brand">
+        <span class="org-app-header__logo" aria-hidden="true">SYX</span>
+        <h1 class="org-app-header__title">Music Identity Engine</h1>
+      </div>
+      <div class="org-app-header__divider" aria-hidden="true"></div>
+      <div class="org-app-header__transport">
+        <span class="org-app-header__track" id="track-name">—</span>
+        <span class="org-app-header__bpm" id="header-bpm" aria-label="Tempo en BPM"></span>
+        <span class="org-app-header__key" id="header-key" aria-label="Tonalidad detectada"></span>
+        <span class="org-app-header__time" id="header-time">0:00</span>
+        <div class="org-app-header__progress" id="header-progress">
+          <div class="org-app-header__progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="org-app-main" id="main-content" tabindex="-1">
+      <aside class="org-app-sidebar org-app-sidebar--left" aria-label="Controles de entrada y reproducción">
+        <div class="org-sidebar-panel org-sidebar-panel--glass org-sidebar-flow" role="region" aria-labelledby="sidebar-left-title">
+          <p class="org-app-sidebar__role" aria-hidden="true">Controles</p>
+          <h2 class="org-app-sidebar__title" id="sidebar-left-title">Entrada</h2>
+          <div class="org-flow-stepper" aria-label="Pasos para usar la aplicación">
+            <div class="org-flow-stepper__step" data-step="1" id="flow-step-1">
+              <span class="org-flow-stepper__badge">1</span>
+              <span class="org-flow-stepper__label">Sube archivos</span>
+            </div>
+            <div class="org-flow-stepper__connector" aria-hidden="true"></div>
+            <div class="org-flow-stepper__step" data-step="2" id="flow-step-2">
+              <span class="org-flow-stepper__badge">2</span>
+              <span class="org-flow-stepper__label">Analiza</span>
+            </div>
+            <div class="org-flow-stepper__connector" aria-hidden="true"></div>
+            <div class="org-flow-stepper__step" data-step="3" id="flow-step-3">
+              <span class="org-flow-stepper__badge">3</span>
+              <span class="org-flow-stepper__label">Reproduce</span>
+            </div>
+          </div>
+          <div class="org-sidebar-flow__block org-sidebar-upload-group" data-flow-step="1">
+            <span class="org-sidebar-upload-label">Audio</span>
+            <section class="mol-upload-card" id="audio-card">
+              <label for="audio-input" class="mol-upload-card__drop">
+                <span class="mol-upload-card__icon"><i data-lucide="music"></i></span>
+                <span class="mol-upload-card__label" id="audio-name">Arrastra o haz clic (.wav, .mp3)</span>
+              </label>
+              <input type="file" id="audio-input" accept=".wav,.mp3,.ogg,audio/wav,audio/x-wav,audio/mpeg,audio/mp3,audio/ogg" class="visually-hidden">
+            </section>
+          </div>
+          <div id="status" class="mol-status mol-status--compact" aria-live="polite"></div>
+          <div class="org-sidebar-flow__block org-sidebar-actions" data-flow-step="2">
+            <p class="org-sidebar-actions-label">Analizar</p>
+            <button type="button" class="atom-btn atom-btn--glass atom-btn--glass-primary btn-run org-sidebar-flow__cta" id="btn-run" title="Procesa el audio y letra que hayas subido">
+              <i data-lucide="zap" aria-hidden="true"></i> Ejecutar
+            </button>
+            <div id="analysis-progress" class="analysis-progress-wrap" hidden aria-live="polite"></div>
+          </div>
+          <div class="org-sidebar-flow__block org-sidebar-play-wrap" data-flow-step="3">
+            <p class="org-sidebar-actions-label">Reproducir</p>
+            <div class="org-sidebar-play-row">
+              <button type="button" class="org-sidebar-play" id="btn-play-sidebar" disabled aria-label="Reproducir (analiza primero)" title="Reproduce el audio tras analizar">
+                <span class="org-sidebar-play__icon org-sidebar-play__icon--play"><i data-lucide="play"></i></span>
+                <span class="org-sidebar-play__icon org-sidebar-play__icon--pause"><i data-lucide="pause"></i></span>
+                Play
+              </button>
+              <button type="button" class="atom-btn atom-btn--glass atom-btn--glass-outline atom-btn--sm org-sidebar-flow__preview" id="btn-preview-html" title="Abre una página HTML con todos los tokens aplicados" disabled>
+                <i data-lucide="external-link" aria-hidden="true"></i> Ver HTML
+              </button>
+            </div>
+          </div>
+          <div class="org-sidebar-flow__block org-sidebar-export-wrap" id="output-panel">
+            <p class="org-sidebar-actions-label">Opciones</p>
+            <p class="org-sidebar-actions-hint">Congelar tema o exportar en varios formatos</p>
+            <div class="org-sidebar-options-row">
+              <button type="button" class="atom-btn atom-btn--glass atom-btn--glass-outline atom-btn--sm" id="btn-freeze-theme" aria-pressed="false" aria-label="Congelar tema actual para inspección">
+                <i data-lucide="snowflake" aria-hidden="true"></i> Congelar
+              </button>
+              <div class="org-sidebar-export" aria-label="Exportar">
+                <button type="button" class="atom-btn atom-btn--glass atom-btn--glass-outline atom-btn--sm" id="btn-export" disabled aria-haspopup="true" aria-expanded="false" aria-controls="export-menu" title="Analiza primero para exportar">
+                  <i data-lucide="download" aria-hidden="true"></i> Exportar
+                </button>
+                <div class="org-sidebar-export-menu" id="export-menu" hidden role="menu" aria-label="Opciones de exportación">
+                  <button type="button" data-export="png" role="menuitem">PNG visualización</button>
+                  <button type="button" data-export="chart" role="menuitem">PNG gráfico</button>
+                  <button type="button" data-export="report" role="menuitem">Informe HTML</button>
+                  <button type="button" data-export="json" role="menuitem">JSON mapa de la canción</button>
+                  <button type="button" data-export="tokens-json" role="menuitem">JSON tokens</button>
+                  <button type="button" data-export="tokens-css" role="menuitem">CSS custom properties</button>
+                  <button type="button" data-export="syx-theme" role="menuitem">SYX theme config</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+      <section class="org-app-center org-app-center--operating" id="center-operating">
+        <div class="org-onboarding org-onboarding--glass" id="onboarding" aria-live="polite">
+          <h2 class="org-onboarding__title">Cómo empezar</h2>
+          <ol class="org-onboarding__steps">
+            <li><strong>Sube audio</strong> — WAV, MP3 u OGG</li>
+            <li><strong>Analiza</strong> — Pulsa <strong>Ejecutar</strong> para procesar tu audio</li>
+            <li><strong>Reproduce</strong> — Pulsa Play cuando el análisis termine</li>
+          </ol>
+          <p class="org-onboarding__hint">La interfaz reacciona a la música: colores, metros y gráficos se actualizan en tiempo real.</p>
+        </div>
+        <div class="org-music-dashboard org-music-dashboard--data-focus" id="visual-stage">
+          <div class="org-music-dashboard__decorative" aria-hidden="true">
+            <div class="org-music-dashboard__pulse"></div>
+            <div class="org-music-dashboard__ring org-music-dashboard__ring--energy"></div>
+            <div class="org-music-dashboard__ring org-music-dashboard__ring--tension"></div>
+            <div class="org-music-dashboard__ring org-music-dashboard__ring--timbral"></div>
+            <div class="org-emotion-bubbles-wrap" id="emotion-bubbles"></div>
+            <div class="org-emotion-metrics" id="emotion-metrics" aria-label="Métricas por sector emocional"></div>
+          </div>
+          <div class="org-music-dashboard__center org-center-operating">
+            <p class="org-music-dashboard__hint" id="center-hint">Sube audio para comenzar</p>
+            <div class="identity-builder" id="identity-builder" role="region" aria-labelledby="identity-builder-title">
+              <h2 class="identity-builder__title" id="identity-builder-title">Traducción en vivo: Música → Identidad visual</h2>
+              <p class="identity-builder__desc">Colores, tipografía y formas que el algoritmo genera a partir del audio en tiempo real.</p>
+              <div class="identity-builder__content" id="identity-builder-content"></div>
+            </div>
+            <div class="dashboard-widget dashboard-widget--output org-sidebar-panel org-sidebar-panel--glass org-output-panel" role="region" aria-labelledby="live-preview-title">
+              <h3 class="org-app-sidebar__title" id="live-preview-title">Output SYX</h3>
+              <p class="org-app-sidebar__desc">Identidad visual generada al compás de la música: paleta, tokens y componentes en tiempo real.</p>
+              <div class="live-theme-preview-wrap live-theme-preview-wrap--prominent" id="live-theme-preview" role="region"></div>
+            </div>
+            <div class="dashboard-widget dashboard-widget--tokens org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-tokens-title">
+              <h3 class="org-app-sidebar__title" id="sidebar-tokens-title">Token Foundations</h3>
+              <p class="org-app-sidebar__desc">Fundamentos de diseño derivados de la música.</p>
+              <div class="widget-token-inspector" id="widget-token-inspector"></div>
+            </div>
+            <div class="center-data-stage" id="center-data-stage" aria-label="Análisis en tiempo real"></div>
+            <div class="data-analytics-panel" id="data-analytics-panel" aria-label="Panel de análisis de datos"></div>
+            <div class="org-center-dashboard org-center-dashboard--compact" id="center-dashboard" aria-label="Mapa de análisis progresivo">
+              <div class="org-center-dashboard__maps" id="center-maps" aria-label="Mapas por dominio"></div>
+              <div class="org-center-dashboard__sums" id="center-sums" aria-label="Sumatorios y operaciones"></div>
+            </div>
+            <div class="org-center-panels org-dashboard-grid" aria-label="Paneles de análisis">
+              <div class="dashboard-widget dashboard-widget--chart dashboard-widget--glass-crystal org-sidebar-panel org-sidebar-panel--glass observer-layer observer-layer--2" role="region" aria-labelledby="sidebar-chart-title">
+                <p class="org-app-sidebar__role" aria-hidden="true">Capa 2</p>
+                <h2 class="org-app-sidebar__title" id="sidebar-chart-title">Semántico musical</h2>
+                <p class="org-app-sidebar__desc">Energía, Tensión, Brillo, Ritmo y Emoción a lo largo del tiempo.</p>
+                <div class="org-algorithm-chart-wrap">
+                  <div class="org-algorithm-chart" id="algorithm-chart" title="Evolución temporal"></div>
+                </div>
+              </div>
+              <div class="dashboard-widget dashboard-widget--quickview dashboard-widget--glass-crystal org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-quickview-title">
+                <p class="org-app-sidebar__role" aria-hidden="true">Visión rápida</p>
+                <h2 class="org-app-sidebar__title" id="sidebar-quickview-title">Energía · Tensión · Brillo · Ritmo</h2>
+                <div class="dashboard-widget-bars-row" id="widget-quickview-bars"></div>
+              </div>
+              <div class="dashboard-widget dashboard-widget--register org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-register-title">
+                <p class="org-app-sidebar__role" aria-hidden="true">Espectro</p>
+                <h2 class="org-app-sidebar__title" id="sidebar-register-title">Registro</h2>
+                <p class="org-app-sidebar__desc">Graves ↔ agudos. Dominancia tonal.</p>
+                <div id="widget-register"></div>
+              </div>
+              <div class="dashboard-widget dashboard-widget--instruments org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-instruments-title">
+                <p class="org-app-sidebar__role" aria-hidden="true">Instrumentos</p>
+                <h2 class="org-app-sidebar__title" id="sidebar-instruments-title">Instrumentación</h2>
+                <p class="org-app-sidebar__desc">Percusión, voz, bass, pad, lead.</p>
+                <div id="widget-instruments"></div>
+              </div>
+              <div class="dashboard-widget dashboard-widget--texture org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-texture-title">
+                <p class="org-app-sidebar__role" aria-hidden="true">Textura</p>
+                <h2 class="org-app-sidebar__title" id="sidebar-texture-title">Textura</h2>
+                <p class="org-app-sidebar__desc">Densidad y complejidad de capas.</p>
+                <div id="widget-texture"></div>
+              </div>
+              <div class="dashboard-widget dashboard-widget--domains org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-domains-title">
+                <p class="org-app-sidebar__role" aria-hidden="true">Dominios</p>
+                <h2 class="org-app-sidebar__title" id="sidebar-domains-title">Dominios activos</h2>
+                <p class="org-app-sidebar__desc">Armonía • Timbres • Registro • Ritmo • Instrumentación.</p>
+                <div class="org-algorithm-feedback" id="algorithm-feedback" aria-label="Dominios activos del análisis"></div>
+              </div>
+              <div class="dashboard-widget dashboard-widget--algo-stats dashboard-widget--glass-crystal org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-algo-title">
+                <p class="org-app-sidebar__role" aria-hidden="true">Algoritmos</p>
+                <h2 class="org-app-sidebar__title" id="sidebar-algo-title">Estadísticas del pipeline</h2>
+                <p class="org-app-sidebar__desc">Frames, BPM, tonalidad, secciones y confianza.</p>
+                <div id="widget-algorithm-stats"></div>
+              </div>
+              <div class="dashboard-widget dashboard-widget--meters dashboard-widget--glass-crystal org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-meters-title">
+                <p class="org-app-sidebar__role" aria-hidden="true">Tiempo real</p>
+                <h2 class="org-app-sidebar__title" id="sidebar-meters-title">Métricas</h2>
+                <p class="org-app-sidebar__desc">Variables semánticas sincronizadas con la música.</p>
+                <div class="org-algorithm-meters" id="algorithm-meters"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="org-app-sidebar org-app-sidebar--right org-sidebar--compact" aria-label="Gráficos de análisis">
+        <div class="org-sidebar-panel org-sidebar-panel--glass observer-layer observer-layer--1" role="region" aria-labelledby="sidebar-audio-title">
+          <p class="org-app-sidebar__role" aria-hidden="true">Capa 1</p>
+          <h2 class="org-app-sidebar__title" id="sidebar-audio-title">Audio Analysis</h2>
+          <p class="org-app-sidebar__desc">Features crudos del audio en tiempo real.</p>
+          <div id="widget-audio-analysis"></div>
+        </div>
+        <div class="dashboard-widget dashboard-widget--d3-analysis dashboard-widget--glass-crystal org-sidebar-panel org-sidebar-panel--glass" role="region" aria-labelledby="sidebar-d3-title">
+          <p class="org-app-sidebar__role" aria-hidden="true">Análisis</p>
+          <h2 class="org-app-sidebar__title" id="sidebar-d3-title">Gráficos en movimiento</h2>
+          <p class="org-app-sidebar__desc">Evolución de energía, tensión, brillo, ritmo y groove en tiempo real.</p>
+          <div class="widget-d3-charts">
+            <div class="widget-d3-chart-block">
+              <span class="widget-d3-chart__label">Energía · Tensión · Brillo</span>
+              <div class="widget-d3-analysis" id="widget-d3-analysis" aria-label="Gráficos de energía, tensión y brillo"></div>
+            </div>
+            <div class="widget-d3-chart-block">
+              <span class="widget-d3-chart__label">Ritmo · Groove · Pulso</span>
+              <div class="widget-d3-analysis" id="widget-d3-rhythm" aria-label="Gráficos de ritmo, groove y estabilidad del pulso"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <div class="identity-generator-overlay" id="identity-generator-overlay" role="status" aria-live="polite" aria-label="Progreso del generador de identidad visual">
+      <div class="identity-generator-overlay__inner">
+        <p class="identity-generator-overlay__status" id="identity-generator-status">Sube audio y reproduce para generar la identidad</p>
+        <div class="identity-generator-overlay__bar-track">
+          <div class="identity-generator-overlay__bar" id="identity-generator-bar" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="org-app-player org-app-player--glass" role="region" aria-label="Reproductor de audio">
+      <div class="org-app-player__waveform" id="waveform-container" aria-hidden="true"></div>
+      <div class="org-app-player__bar" id="player-bar" role="slider" aria-label="Barra de progreso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00" tabindex="0">
+        <div class="org-app-player__fill" id="timeline-fill"></div>
+      </div>
+      <div class="org-app-player__controls">
+        <button type="button" class="org-app-player__play" id="btn-play" aria-label="Reproducir o pausar" title="Play / Pausa (atajo: Espacio)">
+          <span class="org-app-player__play-icon" aria-hidden="true"><i data-lucide="play"></i></span>
+          <span class="org-app-player__pause-icon" aria-hidden="true"><i data-lucide="pause"></i></span>
+        </button>
+        <div class="org-app-player__audio-wrap">
+          <audio id="audio-el" preload="metadata" controls title="Volumen y barra de progreso"></audio>
+        </div>
+        <span class="org-app-player__time" id="time-display">0:00</span>
+        <span class="org-app-player__time" id="duration-display">0:00</span>
+        <button type="button" class="org-app-player__fullscreen" id="btn-fullscreen" aria-label="Pantalla completa (F)" title="Pantalla completa (F)">
+          <i data-lucide="maximize-2"></i>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/CustomEase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => { typeof lucide !== 'undefined' && lucide.createIcons(); });
+  </script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
