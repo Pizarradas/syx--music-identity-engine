@@ -401,6 +401,70 @@
   border-top: none;
   padding-top: 0;
 }
+
+/* Gráfico circular: Música → Paleta */
+.palette-origin-chart-wrap {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: color-mix(in oklch, var(--semantic-color-primary) 0.04, rgba(0,0,0,0.25));
+  border: 1px solid color-mix(in oklch, var(--semantic-color-primary) 0.2, transparent);
+  border-radius: 12px;
+}
+.palette-origin-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.palette-origin-chart__wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+.palette-origin-chart__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: color-mix(in oklch, var(--semantic-color-primary) 40%, rgba(255,255,255,0.95));
+  margin: 0;
+}
+.palette-origin-chart__sub {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.65);
+  margin: 0;
+}
+.palette-origin-chart__svg {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  transition: opacity 200ms ease;
+}
+.palette-origin-chart__param-segment {
+  transition: opacity 0.5s ease, fill 0.4s ease;
+}
+.palette-origin-chart__result {
+  transition: fill 0.4s ease;
+}
+.palette-origin-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 0.6rem;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.7);
+}
+.palette-origin-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.palette-origin-chart__legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
 .org-output-panel.output-available .org-app-sidebar__desc {
   color: color-mix(in oklch, var(--semantic-color-primary) 25%, rgba(255,255,255,0.8));
 }
@@ -940,7 +1004,7 @@
   font-family: var(--music-center-font-family, inherit);
   font-weight: var(--music-center-font-weight, 600);
   font-size: clamp(1rem, 2.5vw + 0.8rem, var(--music-type-h1, 1.5rem));
-  color: var(--semantic-color-primary);
+  color: var(--semantic-color-type-h1, var(--semantic-color-primary));
   margin: 0 0 0.25rem 0;
   letter-spacing: var(--music-center-letter-spacing, 0.02em);
   line-height: 1.2;
@@ -974,8 +1038,8 @@
 }
 .live-theme-preview__mockup-btn--outline {
   background: transparent;
-  color: var(--semantic-color-primary);
-  border-color: color-mix(in oklch, var(--semantic-color-primary) 50%, transparent);
+  color: var(--semantic-color-btn-outline, var(--semantic-color-accent-warm));
+  border-color: color-mix(in oklch, var(--semantic-color-btn-outline, var(--semantic-color-accent-warm)) 50%, transparent);
 }
 .live-theme-preview__mockup-card {
   padding: 0.6rem 0.75rem;
@@ -1806,27 +1870,35 @@
   transition: color var(--syx-music-transition) ease, font-weight var(--syx-music-transition) ease;
 }
 .live-theme-preview__sample--display {
-  color: var(--semantic-color-primary);
+  color: var(--semantic-color-type-display, var(--semantic-color-primary));
   letter-spacing: var(--music-center-letter-spacing, 0.02em);
   line-height: 1.15;
   margin: 0;
   font-size: clamp(1.25rem, 3vw + 1rem, var(--music-type-display, 2rem));
 }
-.live-theme-preview__sample--h1,
-.live-theme-preview__sample--h2,
+.live-theme-preview__sample--h1 {
+  color: var(--semantic-color-type-h1, var(--semantic-color-accent-warm));
+  margin: 0;
+  line-height: 1.25;
+}
+.live-theme-preview__sample--h2 {
+  color: var(--semantic-color-type-h2, var(--semantic-color-accent-cool));
+  margin: 0;
+  line-height: 1.25;
+}
 .live-theme-preview__sample--h3 {
-  color: var(--semantic-color-primary);
+  color: var(--semantic-color-type-h3, var(--semantic-color-accent-triad-1));
   margin: 0;
   line-height: 1.25;
 }
 .live-theme-preview__sample--body {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--semantic-color-type-body, rgba(255, 255, 255, 0.9));
   margin: 0;
   line-height: 1.45;
   opacity: 0.95;
 }
 .live-theme-preview__sample--caption {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--semantic-color-type-caption, rgba(255, 255, 255, 0.65));
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1860,12 +1932,12 @@
 }
 .live-theme-preview__btn--outline {
   background: transparent;
-  color: var(--semantic-color-primary);
-  border-color: color-mix(in oklch, var(--semantic-color-primary) 50%, transparent);
+  color: var(--semantic-color-btn-outline, var(--semantic-color-accent-warm));
+  border-color: color-mix(in oklch, var(--semantic-color-btn-outline, var(--semantic-color-accent-warm)) 50%, transparent);
 }
 .live-theme-preview__btn--ghost {
-  background: color-mix(in oklch, var(--semantic-color-primary) 0.12, transparent);
-  color: var(--semantic-color-primary);
+  background: color-mix(in oklch, var(--semantic-color-btn-ghost, var(--semantic-color-accent-cool)) 20%, transparent);
+  color: var(--semantic-color-btn-ghost, var(--semantic-color-accent-cool));
   border-color: transparent;
 }
 .live-theme-preview__badge-row {
@@ -1889,12 +1961,12 @@
 }
 .live-theme-preview__badge--outline {
   background: transparent;
-  color: var(--semantic-color-primary);
-  border-color: color-mix(in oklch, var(--semantic-color-primary) 50%, transparent);
+  color: var(--semantic-color-badge-outline, var(--semantic-color-accent-triad-1));
+  border-color: color-mix(in oklch, var(--semantic-color-badge-outline, var(--semantic-color-accent-triad-1)) 50%, transparent);
 }
 .live-theme-preview__badge--soft {
-  background: color-mix(in oklch, var(--semantic-color-primary) 0.2, transparent);
-  color: var(--semantic-color-primary);
+  background: color-mix(in oklch, var(--semantic-color-badge-soft, var(--semantic-color-accent-cool-muted)) 25%, transparent);
+  color: var(--semantic-color-badge-soft, var(--semantic-color-accent-cool-muted));
   border-color: transparent;
 }
 .live-theme-preview__input-wrap {
@@ -1913,7 +1985,7 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .live-theme-preview__input-field::placeholder {
-  color: rgba(255, 255, 255, 0.45);
+  color: color-mix(in oklch, var(--semantic-color-type-caption, var(--semantic-color-accent-cool-muted)) 35%, rgba(255, 255, 255, 0.45));
 }
 .live-theme-preview__card-inner {
   padding: 0.5rem;
