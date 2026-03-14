@@ -2,6 +2,8 @@
  * Identity Builder — vista de traducción en vivo: Música → Identidad visual
  * Paleta nutrida y dinámica, escala tipográfica, espaciado, formas y motion
  */
+import { formatGenreForDisplay } from './palette-origin-chart.js';
+
 let containerEl = null;
 const COLOR_HISTORY_MAX = 24;
 const colorHistory = [];
@@ -22,10 +24,17 @@ export function initIdentityBuilder(container) {
           <div class="identity-builder__swatch-wrap" data-swatch-index="3" title="Comp"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-comp)"></div><span>Comp</span></div>
           <div class="identity-builder__swatch-wrap" data-swatch-index="4" title="Triad 1"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-triad-1)"></div><span>T1</span></div>
           <div class="identity-builder__swatch-wrap" data-swatch-index="5" title="Triad 2"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-triad-2)"></div><span>T2</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="6" title="Subtle"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-subtle)"></div><span>Subtle</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="7" title="Strong"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-strong)"></div><span>Strong</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="8" title="Muted"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))"></div><span>Muted</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="9" title="Vivid"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-vivid, var(--semantic-color-primary-strong))"></div><span>Vivid</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="6" title="Primary RYB"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-ryb, var(--semantic-color-primary))"></div><span>Primary</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="7" title="Secondary"><div class="identity-builder__swatch" style="background: var(--semantic-color-secondary-1)"></div><span>Sec.</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="8" title="Neutral"><div class="identity-builder__swatch" style="background: var(--semantic-color-neutral, oklch(0.55 0.03 0))"></div><span>Neutral</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="9" title="Neutral Light"><div class="identity-builder__swatch" style="background: var(--semantic-color-neutral-light, oklch(0.9 0.02 0))"></div><span>N.Light</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="10" title="Neutral Dark"><div class="identity-builder__swatch" style="background: var(--semantic-color-neutral-dark, oklch(0.2 0.02 0))"></div><span>N.Dark</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="15" title="Blanco"><div class="identity-builder__swatch" style="background: var(--semantic-color-white, #f8f8f8); border: 1px solid rgba(255,255,255,0.3)"></div><span>Blanco</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="16" title="Negro"><div class="identity-builder__swatch" style="background: var(--semantic-color-black, #0a0a0a)"></div><span>Negro</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="11" title="Subtle"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-subtle)"></div><span>Subtle</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="12" title="Strong"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-strong)"></div><span>Strong</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="13" title="Muted"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))"></div><span>Muted</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="14" title="Vivid"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-vivid, var(--semantic-color-primary-strong))"></div><span>Vivid</span></div>
         </div>
       </div>
       <div class="identity-builder__section identity-builder__typography">
@@ -67,7 +76,7 @@ export function initIdentityBuilder(container) {
   `;
 }
 
-const SWATCH_COUNT = 10;
+const SWATCH_COUNT = 17;
 
 export function updateIdentityBuilder(semantic, visual, progress = 1) {
   if (!containerEl) return;
@@ -108,7 +117,10 @@ export function updateIdentityBuilder(semantic, visual, progress = 1) {
 
   if (mappingEl) {
     const hue = Math.round(parseFloat(getComputedStyle(root).getPropertyValue('--syx-music-hue') || '260'));
-    mappingEl.textContent = `Energía ${(e * 100).toFixed(0)}% · Brillo ${(brightness * 100).toFixed(0)}% · Ritmo ${(rhythm * 100).toFixed(0)}% → Hue ${hue}°`;
+    const genreDisplay = formatGenreForDisplay(visual?.genre_detected);
+    const harmonyLabel = (visual?.harmony_label && !/dinámica|dynamic/i.test(visual.harmony_label)) ? visual.harmony_label : (visual?.genre_detected ? 'Triádico' : null);
+    const metaPart = genreDisplay || harmonyLabel ? ` · Género: ${genreDisplay || '—'} · Armonía: ${harmonyLabel || '—'}` : '';
+    mappingEl.textContent = `Energía ${(e * 100).toFixed(0)}% · Brillo ${(brightness * 100).toFixed(0)}% · Ritmo ${(rhythm * 100).toFixed(0)}% → Hue ${hue}°${metaPart}`;
   }
 
   if (typoMappingEl) {

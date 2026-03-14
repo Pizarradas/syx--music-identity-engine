@@ -35,6 +35,7 @@ import { triggerParticleBurst } from './scene.js';
 import { setBPM, onBeat, checkBeat, clearBeatCallbacks, stopTransportSync } from './beat-sync.js';
 import { loadWaveform, setWaveformTime, destroyWaveform } from './waveform.js';
 import { downloadReportHtml, downloadTokensJson, downloadTokensCss, downloadThemePreviewHtml } from './export-utils.js';
+import { formatGenreForDisplay } from './palette-origin-chart.js';
 import { getVisualThrottle, isPageVisible } from './performance-utils.js';
 
 let sceneModule = null;
@@ -390,6 +391,8 @@ if (btnExport && exportMenu) {
         const foundations = lastTokenFoundations ?? (pipelineResult ? semanticToTokenFoundations(pipelineResult.getStateAtTime(0)?.semantic ?? {}, { keyHue: pipelineResult?.metadata?.keyHue }) : null);
         const opts = pipelineResult ? { keyHue: pipelineResult?.metadata?.keyHue } : {};
         if (lastVisualState?.typography_font_family) opts.fontFamily = lastVisualState.typography_font_family;
+        opts.genreDisplay = formatGenreForDisplay(lastVisualState?.genre_detected);
+        opts.harmonyLabel = (lastVisualState?.harmony_label && !/dinámica|dynamic/i.test(lastVisualState.harmony_label)) ? lastVisualState.harmony_label : (lastVisualState?.genre_detected ? 'Triádico' : '');
         downloadThemePreviewHtml(foundations, opts, trackName?.textContent || '—');
         setStatus('HTML con identidad visual descargado.', 'ok');
       } else if (action === 'report') {
@@ -454,18 +457,22 @@ btnRun.addEventListener('click', async () => {
     const initSemantic = initState?.semantic ?? {};
     const keyHue = pipelineResult?.metadata?.keyHue;
     const keyConfidence = pipelineResult?.metadata?.keyConfidence ?? 0.5;
+    const states = pipelineResult?.semantic?.states ?? [];
+    const initAccumulated = states.length ? computeAccumulatedStateUpTo(states, states.length - 1, { decay: 0.001 }) : null;
     const initVisual = semanticToVisual(initSemantic, {
       keyHue,
       keyConfidence,
       fingerprint: trackFingerprint,
       bandData: lastBandData ?? {},
+      metadata: { trackName: audioFile?.name ?? '', durationSec: pipelineResult?.metadata?.duration ?? 0 },
+      accumulated: initAccumulated ? { mean: initAccumulated.mean } : null,
     });
     updateLiveThemePreview(initSemantic, initVisual, 1);
     updatePaletteOriginChart(initSemantic, lastBandData ?? {}, initVisual);
     applyVisualToSyx(initVisual);
     lastVisualState = initVisual;
     lastSemanticState = initSemantic;
-    lastTokenFoundations = semanticToTokenFoundations(initSemantic, { keyHue, fingerprint: trackFingerprint });
+    lastTokenFoundations = semanticToTokenFoundations(initSemantic, { keyHue, fingerprint: trackFingerprint, accumulated: initAccumulated ? { mean: initAccumulated.mean } : null });
     updateFlowSteps();
   } catch (err) {
     setStatus(`Error: ${err.message}`, 'error');
@@ -494,7 +501,7 @@ function updateStateAtTime(t, result) {
     Math.floor((t * 1000) / hopMs),
     states?.length ? states.length - 1 : 0
   );
-  const accumulated = states?.length ? computeAccumulatedStateUpTo(states, idx) : null;
+  const accumulated = states?.length ? computeAccumulatedStateUpTo(states, idx, { decay: 0.001 }) : null;
 
   const visual = semanticToVisual(semantic, {
     hasLyrics: false,
@@ -503,6 +510,7 @@ function updateStateAtTime(t, result) {
     keyConfidence,
     accumulated: accumulated ? { mean: accumulated.mean } : null,
     bandData: lastBandData ?? {},
+    metadata: { trackName: trackName?.textContent ?? '', durationSec: result?.metadata?.duration ?? 0 },
   });
   lastVisualState = visual;
   lastTokenFoundations = semanticToTokenFoundations(semantic, {

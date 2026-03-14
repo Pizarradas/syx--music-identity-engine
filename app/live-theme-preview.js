@@ -53,10 +53,13 @@ export function initLiveThemePreview(containerEl) {
         <div class="live-theme-preview__swatch" data-swatch-index="5" style="background: var(--semantic-color-accent-triad-2)" title="Triad 2"></div>
         <div class="live-theme-preview__swatch" data-swatch-index="6" style="background: var(--semantic-color-accent-split-1, var(--semantic-color-accent-triad-1))" title="Split 1"></div>
         <div class="live-theme-preview__swatch" data-swatch-index="7" style="background: var(--semantic-color-accent-tetrad, var(--semantic-color-accent-triad-2))" title="Tetrad"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="8" style="background: var(--semantic-color-primary-subtle)" title="Subtle"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="9" style="background: var(--semantic-color-primary-strong)" title="Strong"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="10" style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))" title="Muted"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="11" style="background: var(--semantic-color-primary-vivid, var(--semantic-color-primary-strong))" title="Vivid"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="8" style="background: var(--semantic-color-neutral, oklch(0.55 0.03 0))" title="Neutral"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="8a" style="background: var(--semantic-color-white, #f8f8f8); border: 1px solid rgba(255,255,255,0.3)" title="Blanco"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="8b" style="background: var(--semantic-color-black, #0a0a0a)" title="Negro"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="9" style="background: var(--semantic-color-primary-subtle)" title="Subtle"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="10" style="background: var(--semantic-color-primary-strong)" title="Strong"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="11" style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))" title="Muted"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="12" style="background: var(--semantic-color-primary-vivid, var(--semantic-color-primary-strong))" title="Vivid"></div>
       </div>
     </div>
     <div class="live-theme-preview__block live-theme-preview__card live-theme-preview__typography" data-reveal-index="1">

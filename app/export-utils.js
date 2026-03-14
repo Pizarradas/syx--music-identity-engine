@@ -198,6 +198,9 @@ function getCurrentCssVars() {
   const center = document.querySelector('.org-app-center');
   const rootVars = [
     '--semantic-color-primary', '--semantic-color-primary-subtle', '--semantic-color-primary-strong',
+    '--semantic-color-primary-ryb', '--semantic-color-secondary-1',
+    '--semantic-color-neutral', '--semantic-color-neutral-light', '--semantic-color-neutral-dark',
+    '--semantic-color-white', '--semantic-color-black',
     '--semantic-color-primary-muted', '--semantic-color-primary-vivid',
     '--semantic-color-accent-warm', '--semantic-color-accent-cool', '--semantic-color-accent-comp',
     '--semantic-color-accent-triad-1', '--semantic-color-accent-triad-2',
@@ -236,8 +239,10 @@ const GOOGLE_FONTS_LINK = 'https://fonts.googleapis.com/css2?family=Alegreya:ita
  * Genera HTML de vista previa con todos los tokens aplicados
  * Página básica con textos, botones, cards, formularios, etc.
  * Incluye Google Fonts para que Roboto Slab, Cormorant, etc. carguen correctamente.
+ * @param {Object} cssVars - variables CSS
+ * @param {Object} [meta] - { genreDisplay, harmonyLabel } para el caption
  */
-function generateThemePreviewHtml(cssVars) {
+function generateThemePreviewHtml(cssVars, meta = {}) {
   const varsCss = Object.entries(cssVars)
     .map(([k, v]) => `  ${k}: ${v};`)
     .join('\n');
@@ -304,6 +309,13 @@ function generateThemePreviewHtml(cssVars) {
     <h2>Paleta de colores</h2>
     <div class="palette">
       <span style="background: var(--semantic-color-primary)" title="Primary"></span>
+      <span style="background: var(--semantic-color-primary-ryb, var(--semantic-color-primary))" title="Primary RYB"></span>
+      <span style="background: var(--semantic-color-secondary-1)" title="Secondary"></span>
+      <span style="background: var(--semantic-color-neutral, oklch(0.55 0.03 0))" title="Neutral"></span>
+      <span style="background: var(--semantic-color-neutral-light, oklch(0.9 0.02 0))" title="Neutral Light"></span>
+      <span style="background: var(--semantic-color-neutral-dark, oklch(0.2 0.02 0))" title="Neutral Dark"></span>
+      <span style="background: var(--semantic-color-white, #f8f8f8); border: 1px solid rgba(0,0,0,0.1)" title="Blanco"></span>
+      <span style="background: var(--semantic-color-black, #0a0a0a)" title="Negro"></span>
       <span style="background: var(--semantic-color-primary-subtle)" title="Subtle"></span>
       <span style="background: var(--semantic-color-primary-strong)" title="Strong"></span>
       <span style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))" title="Muted"></span>
@@ -377,7 +389,7 @@ function generateThemePreviewHtml(cssVars) {
       <span class="badge">SYX</span>
     </p>
 
-    <p class="caption" style="margin-top: 2rem;">Generado por SYX Music Identity Engine — Los tokens se actualizan en tiempo real según el análisis musical.</p>
+    <p class="caption" style="margin-top: 2rem;">Generado por SYX Music Identity Engine${(meta.genreDisplay || meta.harmonyLabel) ? ` — Género: ${meta.genreDisplay || '—'} · Armonía: ${meta.harmonyLabel || '—'}` : ''} — Los tokens se actualizan en tiempo real según el análisis musical.</p>
   </div>
 </body>
 </html>`;
@@ -387,7 +399,7 @@ function generateThemePreviewHtml(cssVars) {
  * Descarga HTML con la identidad visual integrada (paleta, tipografía, componentes).
  * Prioriza el estado actual del DOM (cuando hay tema aplicado) para reflejar exactamente el análisis.
  * @param {Object} [foundations] - Token foundations (fallback si no hay tema en DOM)
- * @param {Object} [options] - { keyHue, fontFamily }
+ * @param {Object} [options] - { keyHue, fontFamily, genreDisplay, harmonyLabel }
  * @param {string} [trackName] - Nombre del track para el archivo
  * @returns {boolean}
  */
@@ -409,7 +421,11 @@ export function downloadThemePreviewHtml(foundations = null, options = {}, track
       cssVars = { ...root, ...center };
     }
   }
-  const html = generateThemePreviewHtml(cssVars);
+  const meta = {
+    genreDisplay: options.genreDisplay ?? '',
+    harmonyLabel: options.harmonyLabel ?? '',
+  };
+  const html = generateThemePreviewHtml(cssVars, meta);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const base = (String(trackName).replace(/\.[^.]+$/, '') || 'syx-identidad').replace(/[^\w\-]/g, '_');
   downloadBlob(blob, `${base}.html`);
