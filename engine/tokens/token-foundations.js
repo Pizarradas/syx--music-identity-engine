@@ -34,7 +34,7 @@ export function createEmptyFoundations() {
  * accumulatedWeight: cuánto pesa la historia (0..t) vs el momento actual.
  * Alto = identidad estable que refleja el desarrollo de la canción.
  */
-const ACCUMULATED_WEIGHT = 0.65;
+const ACCUMULATED_WEIGHT = 0.75;
 
 function blendSemantic(instant, accumulated, key) {
   if (!accumulated?.mean || accumulated.mean[key] == null) return instant[key] ?? 0.5;

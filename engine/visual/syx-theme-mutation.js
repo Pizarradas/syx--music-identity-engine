@@ -2,12 +2,20 @@
  * Mutación de tema SYX — visual identity → CSS variables
  * La interfaz completa debe reaccionar a los cálculos del algoritmo.
  * docs/13_theming_engine_integration.md
+ * Usa culori para gamut mapping (colores mostrables en sRGB)
  */
+import { formatOklchCss } from './color-utils.js';
+
 const root = typeof document !== 'undefined' ? document.documentElement : null;
 const body = typeof document !== 'undefined' ? document.body : null;
 
 const BASE_HUE = 200;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function chromaForWarmHue(hue, baseChroma, minWarm = 0.3) {
+  const h = ((hue % 360) + 360) % 360;
+  return (h <= 60 || h >= 330) ? Math.max(baseChroma, minWarm) : baseChroma;
+}
 
 /**
  * Oscilación suave para hue (ritmo)
@@ -49,26 +57,59 @@ export function applyVisualToSyx(visual) {
   const visualPreset = visual.visual_preset ?? 'minimal';
 
   const t = Date.now() / 1000;
-  const hue = hueWithOscillation(hueBase + hueOffset * 80 + (temp - 0.5) * 120, hueOscillation, t);
-  // Acentos más separados (±100°): paleta más diferenciada entre tracks
-  const hueWarm = (hue + 100 + accentHueShift + 360) % 360;
-  const hueCool = (hue - 100 + accentHueShift + 360) % 360;
-  const hueComp = (hue + 180 + 360) % 360;
-  const hueTriad1 = (hue + 120 + 360) % 360;
-  const hueTriad2 = (hue + 240 + 360) % 360;
-  const hueSplit1 = (hue + 150 + 360) % 360;
-  const hueSplit2 = (hue + 210 + 360) % 360;
-  const hueTetrad = (hue + 90 + 360) % 360;
+  let hueBaseFinal = hueBase + hueOffset * 80 + (temp - 0.5) * 120;
+  const genreDetected = String(visual.genre_detected ?? '');
+  const isFolkCeltic = /folk|celtic|irish|medieval|acoustic/i.test(genreDetected);
+  const hueNorm = (hueBaseFinal + 360) % 360;
+  if (isFolkCeltic && (hueNorm <= 85 || hueNorm >= 295)) {
+    hueBaseFinal = hueBaseFinal * 0.35 + 172 * 0.65;
+  }
+  const hue = hueWithOscillation(hueBaseFinal, hueOscillation, t);
+  // Folk/celtic: acentos solo en gama fría (azules, verdes, blancos) — sin rojos ni magentas
+  let hueWarm, hueCool, hueTriad1, hueTriad2, hueSplit1, hueSplit2, hueTetrad;
+  if (isFolkCeltic) {
+    hueWarm = (hue + 45 + accentHueShift + 360) % 360;   // cyan/azul en vez de magenta
+    hueCool = (hue + 95 + accentHueShift + 360) % 360;   // azul en vez de amarillo
+    hueTriad1 = hueWarm;
+    hueTriad2 = hueCool;
+    hueSplit1 = (hue + 65 + 360) % 360;
+    hueSplit2 = (hue + 125 + 360) % 360;
+    hueTetrad = (hue + 70 + 360) % 360;
+  } else {
+    hueWarm = (hue + 120 + accentHueShift + 360) % 360;
+    hueCool = (hue + 240 + accentHueShift + 360) % 360;
+    hueTriad1 = (hue + 120 + 360) % 360;
+    hueTriad2 = (hue + 240 + 360) % 360;
+    hueSplit1 = (hue + 150 + 360) % 360;
+    hueSplit2 = (hue + 210 + 360) % 360;
+    hueTetrad = (hue + 90 + 360) % 360;
+  }
+  const hueComp = isFolkCeltic ? (hue + 88 + 360) % 360 : (hue + 180 + 360) % 360;  // folk: azul en vez de rojo
 
   // OKLCH: L y C independientes — variación perceptualmente uniforme
+  const chromaBias = visual.chroma_bias ?? 0.5;
   const chromaPulse = Math.sin(t * 2.5) * 0.03 * motion;
   const lightnessPulse = Math.sin(t * 1.8) * 0.02 * tension;
-  const chroma = clamp(0.12 + sat * 0.65 + chromaPulse, 0.08, 0.42);
+  const chromaRaw = 0.12 + sat * 0.65 + chromaPulse;
+  const chromaMod = 0.5 + chromaBias;
+  const chromaMin = chromaBias < 0.4 ? 0.08 : 0.12;
+  const chromaMax = chromaBias > 0.7 ? 0.48 : 0.42;
+  const chroma = clamp(chromaRaw * chromaMod, chromaMin, chromaMax);
   const lightness = clamp(0.48 + (contrast - 0.5) * 0.35 + lightnessPulse, 0.28, 0.82);
   const chromaMuted = chroma * 0.35;
   const chromaVivid = Math.min(0.45, chroma * 1.4);
   const lightnessDark = Math.max(0.2, lightness - 0.15);
   const lightnessLight = Math.min(0.92, lightness + 0.18);
+  const sharpness = visual.blur_vs_sharpness ?? 0.5;
+  const colorWeights = visual.color_weights ?? {};
+  const neutralLightRatio = colorWeights.neutralLightRatio ?? 0.5;
+  const neutralChroma = (sharpness > 0.6 && tension < 0.5) ? 0.02 : clamp(chroma * 0.2, 0.015, 0.08);
+  const neutralLightness = 0.52 + (contrast - 0.5) * 0.2;
+  const lightL = 0.85 + neutralLightRatio * 0.12;
+  const darkL = 0.22 - (1 - neutralLightRatio) * 0.08;
+  const neutralLight = `oklch(${lightL} ${neutralChroma} ${hue})`;
+  const neutralDark = `oklch(${darkL} ${neutralChroma} ${hue})`;
+  const hueSecondary = (visual.secondary_hue != null ? visual.secondary_hue : (hue + 120 + 360) % 360);
 
   const motionMod = visualMode < 0.3 ? 0.5 : visualMode > 0.7 ? 1.35 : 0.9;
   root.style.setProperty('--syx-music-transition', `${320 + motion * 180 * motionMod}ms`);
@@ -119,13 +160,20 @@ export function applyVisualToSyx(visual) {
   root.style.setProperty('--line-height-normal', '1.5');
   root.style.setProperty('--line-height-relaxed', '1.65');
 
-  root.style.setProperty('--semantic-color-primary', `oklch(${lightness} ${chroma} ${hue})`);
+  root.style.setProperty('--semantic-color-primary', formatOklchCss(lightness, chroma, hue));
+  root.style.setProperty('--semantic-color-primary-ryb', formatOklchCss(lightness, chromaVivid, hue));
   root.style.setProperty('--semantic-color-primary-subtle', `oklch(${lightness + 0.08} ${chroma * 0.6} ${hue})`);
-  root.style.setProperty('--semantic-color-accent-warm', `oklch(${lightness} ${chromaVivid} ${hueWarm})`);
-  root.style.setProperty('--semantic-color-accent-cool', `oklch(${lightness} ${chromaVivid} ${hueCool})`);
-  root.style.setProperty('--semantic-color-accent-comp', `oklch(${lightness * 0.95} ${chroma * 0.95} ${hueComp})`);
-  root.style.setProperty('--semantic-color-accent-triad-1', `oklch(${lightness + 0.04} ${chromaVivid} ${hueTriad1})`);
-  root.style.setProperty('--semantic-color-accent-triad-2', `oklch(${lightness + 0.04} ${chromaVivid} ${hueTriad2})`);
+  root.style.setProperty('--semantic-color-secondary-1', `oklch(${lightness + 0.04} ${chromaForWarmHue(hueSecondary, chroma * 0.9, 0.28)} ${hueSecondary})`);
+  root.style.setProperty('--semantic-color-neutral', `oklch(${neutralLightness} ${neutralChroma} ${hue})`);
+  root.style.setProperty('--semantic-color-neutral-light', neutralLight);
+  root.style.setProperty('--semantic-color-neutral-dark', neutralDark);
+  root.style.setProperty('--semantic-color-white', 'oklch(0.98 0 0)');
+  root.style.setProperty('--semantic-color-black', 'oklch(0.06 0 0)');
+  root.style.setProperty('--semantic-color-accent-warm', formatOklchCss(lightness, chromaForWarmHue(hueWarm, chromaVivid, 0.32), hueWarm));
+  root.style.setProperty('--semantic-color-accent-cool', formatOklchCss(lightness, chromaForWarmHue(hueCool, chromaVivid, 0.32), hueCool));
+  root.style.setProperty('--semantic-color-accent-comp', `oklch(${lightness * 0.95} ${chromaForWarmHue(hueComp, chroma * 0.95, 0.3)} ${hueComp})`);
+  root.style.setProperty('--semantic-color-accent-triad-1', `oklch(${lightness + 0.04} ${chromaForWarmHue(hueTriad1, chromaVivid, 0.32)} ${hueTriad1})`);
+  root.style.setProperty('--semantic-color-accent-triad-2', `oklch(${lightness + 0.04} ${chromaForWarmHue(hueTriad2, chromaVivid, 0.32)} ${hueTriad2})`);
   root.style.setProperty('--semantic-color-accent-split-1', `oklch(${lightness + 0.06} ${chroma * 0.9} ${hueSplit1})`);
   root.style.setProperty('--semantic-color-accent-split-2', `oklch(${lightness + 0.06} ${chroma * 0.9} ${hueSplit2})`);
   root.style.setProperty('--semantic-color-accent-tetrad', `oklch(${lightnessLight * 0.9} ${chroma * 0.85} ${hueTetrad})`);
@@ -201,7 +249,14 @@ export function resetSyxTheme() {
   ].forEach((prop) => root.style.removeProperty(prop));
 
   root.style.removeProperty('--semantic-color-primary');
+  root.style.removeProperty('--semantic-color-primary-ryb');
   root.style.removeProperty('--semantic-color-primary-subtle');
+  root.style.removeProperty('--semantic-color-secondary-1');
+  root.style.removeProperty('--semantic-color-neutral');
+  root.style.removeProperty('--semantic-color-neutral-light');
+  root.style.removeProperty('--semantic-color-neutral-dark');
+  root.style.removeProperty('--semantic-color-white');
+  root.style.removeProperty('--semantic-color-black');
   root.style.removeProperty('--semantic-color-accent-warm');
   root.style.removeProperty('--semantic-color-accent-cool');
   root.style.removeProperty('--semantic-color-accent-comp');

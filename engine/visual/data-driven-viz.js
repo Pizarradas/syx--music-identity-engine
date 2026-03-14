@@ -92,13 +92,13 @@ export function intervalScale(baseSize, count = 6) {
  * pero toda la historia contribuye a la "identidad matemática" del track.
  * @param {Array<Object>} semanticStates - Estados semánticos del pipeline
  * @param {number} endIndex - Índice final (inclusive)
- * @param {{ decay?: number }} opts - decay: 0.002 = mucha memoria, 0.02 = poca
+ * @param {{ decay?: number }} opts - decay: 0.001 = mucha memoria (canción completa), 0.008 = reactivo
  * @returns {{ mean: Object, weights: number[] } | null}
  */
 export function computeAccumulatedStateUpTo(semanticStates, endIndex, opts = {}) {
   if (!semanticStates?.length || endIndex < 0) return null;
   const end = Math.min(endIndex, semanticStates.length - 1);
-  const decay = opts.decay ?? 0.008;
+  const decay = opts.decay ?? 0.001;
   const slice = semanticStates.slice(0, end + 1);
   const n = slice.length;
   const keys = Object.keys(slice[0] || {});
@@ -147,15 +147,23 @@ export function computeTrackFingerprint(semanticStates, sampleCount = 60, metada
   const organicWarm = Math.max(0, org * (1.2 - brightness * 0.5));
   const mechanicalCool = Math.max(0, (1 - org) * brightness * 1.2);
   const percussiveMagenta = Math.max(0, (rhythm + groove) * 0.6);
-  const denseDark = Math.max(0, density * (1.2 - brightness * 0.4));
+  const denseDark = Math.max(0, density * (1.2 - brightness * 0.4)) * 0.65;
   const energyWarm = Math.max(0, energy * 0.8);
+  const brightWarm = Math.max(0, brightness * 0.6 + energy * 0.4);
+  const melodicGolden = Math.max(0, (mean.melodic_prominence ?? 0.5) * (org * 0.8 + 0.2));
+  const folkAcoustic = Math.max(0, org * (mean.melodic_prominence ?? 0.5) * (1 - (mean.harmonic_tension ?? 0.5) * 0.6));
+  const heavyMetal = Math.max(0, (1 - org) * energy * 0.7 + tension * 0.4 + rhythm * 0.3);
 
   const profiles = [
     { score: organicWarm, hue: 35 },
     { score: mechanicalCool, hue: 210 },
     { score: percussiveMagenta, hue: 330 },
-    { score: denseDark, hue: 145 },
+    { score: denseDark, hue: 175 },
     { score: energyWarm, hue: 15 },
+    { score: brightWarm, hue: 60 },
+    { score: melodicGolden, hue: 50 },
+    { score: folkAcoustic, hue: 45 },
+    { score: heavyMetal, hue: 0 },
   ];
   profiles.sort((a, b) => b.score - a.score);
   const dominant = profiles[0];
@@ -163,11 +171,15 @@ export function computeTrackFingerprint(semanticStates, sampleCount = 60, metada
   const tertiary = profiles[2];
 
   let hueSeed = dominant.score > 0.1 ? dominant.hue : 200;
-  if (secondary && secondary.score > 0.15) {
-    hueSeed = hueSeed * 0.65 + secondary.hue * 0.35;
+  const scoreDiff = dominant.score - (secondary?.score ?? 0);
+  const blendSecondary = secondary && secondary.score > 0.12;
+  if (blendSecondary) {
+    const mix = scoreDiff < 0.15 ? 0.45 : 0.35;
+    hueSeed = hueSeed * (1 - mix) + secondary.hue * mix;
   }
-  if (tertiary && tertiary.score > 0.12 && Math.abs(hueSeed - tertiary.hue) > 60) {
-    hueSeed = hueSeed * 0.9 + tertiary.hue * 0.1;
+  if (tertiary && tertiary.score > 0.1 && Math.abs(hueSeed - tertiary.hue) > 50) {
+    const mix = scoreDiff < 0.2 ? 0.15 : 0.08;
+    hueSeed = hueSeed * (1 - mix) + tertiary.hue * mix;
   }
   const spectralBias = (bassW - trebleW) * 80;
   hueSeed = (hueSeed + spectralBias + 360) % 360;
@@ -176,7 +188,7 @@ export function computeTrackFingerprint(semanticStates, sampleCount = 60, metada
   const dur = metadata.durationSec ?? 0;
   const nameLen = (metadata.trackName ?? '').length;
   const trackSeed = ((dur * 7 + n * 13 + nameLen * 31) % 360);
-  hueSeed = (hueSeed + trackSeed * 0.15 + 360) % 360;
+  hueSeed = (hueSeed + trackSeed * 0.3 + 360) % 360;
 
   const satSeed = 0.25 + energy * 0.5 + (1 - tension) * 0.25 + (rhythm + groove) * 0.1;
 

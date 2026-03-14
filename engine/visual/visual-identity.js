@@ -12,6 +12,8 @@
  * - texture_density → particle density (low=minimal, high=dense)
  * - percussion_presence → particle bursts; vocal_presence → typography emphasis
  */
+import { computeColorWeights, computeChartSegments } from './color-theory.js';
+import { resolveGenrePalette } from './genre-palettes.js';
 
 /**
  * @typedef {Object} VisualIdentityState
@@ -168,7 +170,11 @@ function instrumentToHueBase(semantic) {
     { score: world, hue: 75 },
     { score: opera, hue: 20 },
     { score: houseTechno, hue: 195 },
-    { score: clamp(d * (1.3 - b * 0.4), 0, 1), hue: 145 },
+    { score: clamp(d * (1.3 - b * 0.4), 0, 1) * 0.6, hue: 175 },
+    { score: b * 0.5 + e * 0.3, hue: 60 },
+    { score: melodic * 0.6 + org * 0.3, hue: 50 },
+    { score: org * melodic * (1 - tension * 0.5), hue: 45 },
+    { score: (1 - org) * e * 0.6 + tension * 0.4 + rhythm * 0.25, hue: 0 },
   ];
   profiles.sort((a, b) => b.score - a.score);
   const dominant = profiles[0];
@@ -260,7 +266,7 @@ function computeDisplayMode(semantic, hasLyrics) {
   return karaoke;
 }
 
-const ACCUMULATED_VISUAL_WEIGHT = 0.6;
+const ACCUMULATED_VISUAL_WEIGHT = 0.75;
 
 function blendForVisual(semantic, accumulated, key) {
   if (!accumulated?.mean || accumulated.mean[key] == null) return semantic[key] ?? 0.5;
@@ -303,17 +309,27 @@ export function semanticToVisual(semantic, context = {}) {
   const hueOffset = tonalToHueOffset(tonal, t);
 
   const fp = context.fingerprint;
-  const keyHue = context.keyHue;
-  const instrumentHue = instrumentToHueBase(blended);
-  const keyConfidence = context.keyConfidence ?? 0.5;
-  let hueBase;
-  if (keyHue != null && keyConfidence > 0.3) {
-    const keyWeight = 0.5 + keyConfidence * 0.4;
-    const charWeight = 1 - keyWeight;
-    hueBase = (keyHue * keyWeight + instrumentHue * charWeight + 360) % 360;
-  } else {
-    hueBase = fp?.hueBase ?? instrumentHue;
-  }
+  const genrePalette = resolveGenrePalette(blended, {
+    keyHue: context.keyHue,
+    keyConfidence: context.keyConfidence,
+    metadata: context.metadata,
+  });
+  const genreChroma = genrePalette.chroma;
+  const genreNeutralMix = genrePalette.neutralMix;
+  let hueBase = genrePalette.hue;
+  const meta = context.metadata ?? {};
+  const nameLen = (meta.trackName ?? '').length;
+  const dur = meta.durationSec ?? 0;
+  const genreColorConfidence = genrePalette.genreColorConfidence ?? 0;
+  const scoreGap = genrePalette.scoreGap ?? 0.2;
+  const ambiguousGenre = scoreGap < 0.12;
+  const trackSeedFactor = ambiguousGenre
+    ? 0.32 - genreColorConfidence * 0.1
+    : 0.2 - genreColorConfidence * 0.14;
+  const trackSeed = fp
+    ? ((fp.mean?.spectral_width ?? 0.5) * 17 + (fp.mean?.dynamic_range ?? 0.5) * 23 + ((fp.mean?.groove ?? 0.5) * 31) + nameLen * 7 + dur * 0.13) % 360
+    : (nameLen * 11) % 360;
+  hueBase = (hueBase + trackSeed * trackSeedFactor + 360) % 360;
   const rhythmAccent = rhythmToAccent(blended);
   // Mayor sensibilidad: groove y ritmo amplifican la modulación de acentos
   rhythmAccent.saturationBoost = clamp(rhythmAccent.saturationBoost + groove * 0.15 + rhythm * 0.1, 0, 0.5);
@@ -346,9 +362,14 @@ export function semanticToVisual(semantic, context = {}) {
   const particleDensityBoost = spectralRichness * 0.3;
   const particleDensityFactor = clamp(d * 0.5 + (1 - displayMode) * 0.4 + groove * 0.2 + particleDensityBoost, 0.3, 1);
 
+  const genreStr = String(genrePalette.genre ?? '');
+  const trustPsychology = /folk|celtic|irish|medieval|acoustic|ambient|classical|blues|cinematic|soundtrack/i.test(genreStr);
+
   if (particleChromaHue >= 0 && particleChromaStrength > 0.3) {
     const chromaHueDeg = particleChromaHue * 360;
-    hueBase = hueBase * (1 - particleChromaStrength * 0.6) + chromaHueDeg * particleChromaStrength * 0.6;
+    const baseMix = trustPsychology ? 0.35 : 0.6;
+    const chromaMix = particleChromaStrength * baseMix * (1 - genreColorConfidence * 0.6);
+    hueBase = hueBase * (1 - chromaMix) + chromaHueDeg * chromaMix;
   }
 
   const bandData = context.bandData ?? {};
@@ -359,8 +380,37 @@ export function semanticToVisual(semantic, context = {}) {
   const toRad = (deg) => (deg * Math.PI) / 180;
   const x = weights.reduce((acc, w, i) => acc + Math.cos(toRad(paramHues[i])) * w, 0);
   const y = weights.reduce((acc, w, i) => acc + Math.sin(toRad(paramHues[i])) * w, 0);
-  hueBase = (Math.atan2(y, x) * 180) / Math.PI;
-  if (hueBase < 0) hueBase += 360;
+  const centroidHue = (Math.atan2(y, x) * 180) / Math.PI;
+  const blendedCentroid = (centroidHue < 0 ? centroidHue + 360 : centroidHue);
+  const baseCentroidMix = trustPsychology ? 0.08 : 0.15;
+  const centroidMix = baseCentroidMix * (1 - genreColorConfidence * 0.6);
+  hueBase = (hueBase * (1 - centroidMix) + blendedCentroid * centroidMix + 360) % 360;
+
+  const hueH = (hueBase + 360) % 360;
+  const isHueWarm = hueH <= 85 || hueH >= 295;
+  if (trustPsychology && isHueWarm) {
+    const specPrimary = genrePalette.genreSpec?.primaryHue;
+    const specH = specPrimary != null ? (specPrimary + 360) % 360 : 0;
+    const isSpecWarm = specPrimary != null && (specH <= 85 || specH >= 295);
+    const anchorHue = /folk|celtic|irish|medieval|acoustic/i.test(genreStr) ? 172
+      : /ambient|cinematic|soundtrack/i.test(genreStr) ? 205
+      : /blues/i.test(genreStr) ? 250
+      : /classical/i.test(genreStr) ? 40
+      : !isSpecWarm && specPrimary != null ? specPrimary : 200;
+    const coolPull = /folk|celtic|irish|medieval|acoustic/i.test(genreStr) ? 0.72 : 0.5;
+    hueBase = (hueBase * (1 - coolPull) + anchorHue * coolPull + 360) % 360;
+  }
+
+  const colorWeights = computeColorWeights(blended, {
+    genreSpec: genrePalette.genreSpec,
+    genreNeutralMix: genrePalette.genreSpec ? undefined : genreNeutralMix,
+  });
+  const chartSegments = computeChartSegments(blended, hueBase, paramHues, colorWeights, {
+    secondaryOffset: genrePalette.genreSpec?.secondaryOffset ?? 120,
+    tertiaryOffset: genrePalette.genreSpec?.tertiaryOffset ?? 240,
+    chromaBias: genrePalette.genreSpec?.chromaBias ?? 0.5,
+    quantizeTo12Tones: true,
+  });
 
   /**
    * Familia tipográfica según carácter musical — 4 categorías con amplio pool.
@@ -405,10 +455,18 @@ export function semanticToVisual(semantic, context = {}) {
   const contrastGenreBoost = highEnergyGenres > 0.5 ? 0.08 : 0;
 
   const baseSat = fp?.satBase ?? (0.4 + e * 0.4 + dyn * 0.2);
+
   return {
     color_temperature: clamp(0.2 + b * 0.5 + (1 - org) * 0.2 + (1 - sw) * 0.15, 0, 1),
-    saturation_intensity: clamp(baseSat * 0.9 + rhythmAccent.saturationBoost + (1 - t) * 0.15 + satGenreBoost + satGenreSoft, 0.25, 1),
+    saturation_intensity: clamp((genreChroma || baseSat) * 0.95 + rhythmAccent.saturationBoost + (1 - t) * 0.12 + satGenreBoost + satGenreSoft, 0.25, 1),
     hue_base: hueBase,
+    secondary_hue: (hueBase + (genrePalette.genreSpec?.secondaryOffset ?? 120) + 360) % 360,
+    genre_detected: genrePalette.genre,
+    genre_affinity: genrePalette.genreAffinity ?? [],
+    harmony_mode: genrePalette.genreSpec?.harmonyMode ?? null,
+    harmony_label: genrePalette.genreSpec?.harmonyLabel ?? null,
+    chroma_bias: genrePalette.genreSpec?.chromaBias ?? 0.5,
+    genre_neutral_mix: genreNeutralMix,
     accent_hue_shift: rhythmAccent.accentHueShift,
     hue_oscillation: rhythmAccent.hueOscillation,
     contrast_level: clamp(0.5 + i * 0.4 + dyn * 0.15 + contrastGenreBoost, 0, 1),
@@ -441,6 +499,8 @@ export function semanticToVisual(semantic, context = {}) {
     particle_size_factor: particleSizeFactor,
     particle_density_boost: particleDensityBoost,
     param_hues: paramHues,
+    color_weights: colorWeights,
+    chart_segments: chartSegments,
   };
 }
 
