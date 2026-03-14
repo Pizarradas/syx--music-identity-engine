@@ -64,15 +64,31 @@ function brightnessToStridency(b) {
 }
 
 /**
- * Paleta monocromática — un solo hue con variaciones sutiles de luminosidad
- * Sin arcoíris: azul/violeta coherente
+ * Paleta cromática — variación según música para mayor diferenciación entre tracks.
+ * Usa spectral_width y dynamic_range para amplitud; bandData para acentos cálidos/fríos.
  */
 function computeChromaticPalette(hueBase, semantic, bandData) {
-  const HUE_VARIATION = 12; // ±12° máximo para evitar arcoíris
+  const sw = semantic?.spectral_width ?? 0.5;
+  const dyn = semantic?.dynamic_range ?? 0.5;
+  const tension = semantic?.harmonic_tension ?? 0.5;
+  const bass = bandData?.bass ?? 0.33;
+  const highs = bandData?.highs ?? 0.33;
+
+  // Variación dinámica: tracks con más espectro/dinámica → paleta más amplia
+  const baseVariation = 12;
+  const dynamicVariation = (sw * 0.5 + dyn * 0.5) * 48; // hasta +48° en tracks ricos
+  const HUE_VARIATION = Math.min(60, baseVariation + dynamicVariation);
+
   const hues = [];
   for (let i = 0; i < 6; i++) {
     const offset = (i - 2.5) * (HUE_VARIATION / 2.5);
     let h = hueBase + offset;
+
+    // Sesgo por bandas: más bass → tonos cálidos; más highs → tonos fríos
+    const bassBias = (bass - 0.33) * 25;
+    const highsBias = (highs - 0.33) * -20;
+    h += bassBias + highsBias;
+
     if (h < 0) h += 360;
     if (h >= 360) h -= 360;
     hues.push(h);

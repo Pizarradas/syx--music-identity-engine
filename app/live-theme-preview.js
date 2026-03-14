@@ -46,15 +46,17 @@ export function initLiveThemePreview(containerEl) {
       <h3 class="live-theme-preview__block-title">Paleta</h3>
       <div class="live-theme-preview__swatches live-theme-preview__swatches--extended live-theme-preview__swatches--progressive">
         <div class="live-theme-preview__swatch" data-swatch-index="0" style="background: var(--semantic-color-primary)" title="Primary"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="1" style="background: var(--semantic-color-primary-subtle)" title="Subtle"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="2" style="background: var(--semantic-color-primary-strong)" title="Strong"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="3" style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))" title="Muted"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="4" style="background: var(--semantic-color-primary-vivid, var(--semantic-color-primary-strong))" title="Vivid"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="5" style="background: var(--semantic-color-accent-warm)" title="Warm"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="6" style="background: var(--semantic-color-accent-cool)" title="Cool"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="7" style="background: var(--semantic-color-accent-comp)" title="Comp"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="8" style="background: var(--semantic-color-accent-triad-1)" title="Triad 1"></div>
-        <div class="live-theme-preview__swatch" data-swatch-index="9" style="background: var(--semantic-color-accent-triad-2)" title="Triad 2"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="1" style="background: var(--semantic-color-accent-warm)" title="Warm"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="2" style="background: var(--semantic-color-accent-cool)" title="Cool"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="3" style="background: var(--semantic-color-accent-comp)" title="Comp"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="4" style="background: var(--semantic-color-accent-triad-1)" title="Triad 1"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="5" style="background: var(--semantic-color-accent-triad-2)" title="Triad 2"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="6" style="background: var(--semantic-color-accent-split-1, var(--semantic-color-accent-triad-1))" title="Split 1"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="7" style="background: var(--semantic-color-accent-tetrad, var(--semantic-color-accent-triad-2))" title="Tetrad"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="8" style="background: var(--semantic-color-primary-subtle)" title="Subtle"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="9" style="background: var(--semantic-color-primary-strong)" title="Strong"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="10" style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))" title="Muted"></div>
+        <div class="live-theme-preview__swatch" data-swatch-index="11" style="background: var(--semantic-color-primary-vivid, var(--semantic-color-primary-strong))" title="Vivid"></div>
       </div>
     </div>
     <div class="live-theme-preview__block live-theme-preview__card live-theme-preview__typography" data-reveal-index="1">
@@ -180,7 +182,7 @@ export function updateLiveThemePreview(semantic, visual, progress = 0) {
   // Swatches progresivos
   const swatchesWrap = wrapEl.querySelector('.live-theme-preview__swatches--progressive');
   if (swatchesWrap) {
-    const visibleCount = Math.min(10, Math.max(0, Math.floor(progress * 12)));
+    const visibleCount = Math.min(12, Math.max(0, Math.floor(progress * 14)));
     swatchesWrap.querySelectorAll('[data-swatch-index]').forEach((el) => {
       const idx = parseInt(el.dataset.swatchIndex ?? '0', 10);
       el.classList.toggle('is-revealed', idx < visibleCount);
@@ -207,27 +209,33 @@ export function updateLiveThemePreview(semantic, visual, progress = 0) {
     if (heroEl) heroEl.classList.toggle('is-revealed', mockupVisible && revealProgress > 0.35);
   }
 
-  // Token badges que aparecen uno a uno
+  // Token badges que aparecen uno a uno — cada uno con un tono distinto de la paleta
   if (tokenBadges) {
     const badgeCount = Math.min(TOKEN_BADGES.length, Math.floor(progress * (TOKEN_BADGES.length + 2)));
+    const tokenVars = ['--semantic-color-primary', '--semantic-color-accent-warm', '--semantic-color-accent-cool', '--semantic-color-accent-triad-1', '--semantic-color-accent-triad-2'];
     if (badgeCount > tokenBadges.children.length) {
       for (let i = tokenBadges.children.length; i < badgeCount; i++) {
         const badge = document.createElement('span');
         badge.className = 'live-theme-preview__token-badge';
         badge.textContent = TOKEN_BADGES[i];
-        badge.style.background = 'var(--semantic-color-primary)';
-        badge.style.borderColor = 'var(--semantic-color-primary)';
+        const v = tokenVars[i % tokenVars.length];
+        badge.style.background = `var(${v})`;
+        badge.style.borderColor = `var(${v})`;
         tokenBadges.appendChild(badge);
       }
     }
     tokenBadges.querySelectorAll('.live-theme-preview__token-badge').forEach((b, i) => {
       b.classList.toggle('is-visible', i < badgeCount);
+      const v = tokenVars[i % tokenVars.length];
+      b.style.background = `var(${v})`;
+      b.style.borderColor = `var(${v})`;
     });
   }
 
-  // Muestra tipográfica
+  // Muestra tipográfica — cada nivel con su color semántico
   if (typoSamples) {
     const typoCount = Math.min(TYPO_SAMPLES.length, Math.floor(progress * (TYPO_SAMPLES.length + 2)));
+    const typoColorVars = ['--semantic-color-type-display', '--semantic-color-type-h1', '--semantic-color-type-h2', '--semantic-color-type-h3', '--semantic-color-type-body', '--semantic-color-type-caption'];
     if (typoSamples.children.length === 0 && typoCount > 0) {
       TYPO_SAMPLES.forEach((label, i) => {
         const p = document.createElement('p');
@@ -235,41 +243,48 @@ export function updateLiveThemePreview(semantic, visual, progress = 0) {
         p.setAttribute('data-typo-index', String(i));
         p.style.fontFamily = getRootVar('--music-center-font-family') || 'inherit';
         p.style.fontWeight = getRootVar('--music-center-font-weight') || '500';
-        p.style.color = 'var(--semantic-color-primary)';
+        p.style.color = `var(${typoColorVars[i] ?? '--semantic-color-type-caption'}, var(--semantic-color-primary))`;
         p.textContent = label;
         typoSamples.appendChild(p);
       });
     }
     typoSamples.querySelectorAll('.live-theme-preview__typo-line').forEach((el, i) => {
       el.classList.toggle('is-visible', i < typoCount);
+      el.style.color = `var(${typoColorVars[i] ?? '--semantic-color-type-caption'}, var(--semantic-color-primary))`;
     });
   }
 
-  // Componentes que se apilan
+  // Componentes que se apilan — cada uno con un acento distinto
   if (componentCards) {
     const compCount = Math.min(COMPONENT_LABELS.length, Math.floor(progress * (COMPONENT_LABELS.length + 2)));
+    const compVars = ['--semantic-color-primary', '--semantic-color-accent-warm', '--semantic-color-accent-cool', '--semantic-color-accent-triad-1', '--semantic-color-accent-triad-2', '--semantic-color-accent-comp'];
     if (compCount > componentCards.children.length) {
       for (let i = componentCards.children.length; i < compCount; i++) {
         const card = document.createElement('div');
         card.className = 'live-theme-preview__comp-card';
         card.innerHTML = `<span>${COMPONENT_LABELS[i]}</span>`;
-        card.style.borderColor = 'var(--semantic-color-primary)';
-        card.style.background = 'color-mix(in oklch, var(--semantic-color-primary) 15%, transparent)';
+        const v = compVars[i % compVars.length];
+        card.style.borderColor = `var(${v})`;
+        card.style.background = `color-mix(in oklch, var(${v}) 15%, transparent)`;
         componentCards.appendChild(card);
       }
     }
     componentCards.querySelectorAll('.live-theme-preview__comp-card').forEach((c, i) => {
       c.classList.toggle('is-visible', i < compCount);
+      const v = compVars[i % compVars.length];
+      c.style.borderColor = `var(${v})`;
+      c.style.background = `color-mix(in oklch, var(${v}) 15%, transparent)`;
     });
   }
 
-  // Orbes flotantes que pulsan con el ritmo
+  // Orbes flotantes que pulsan con el ritmo — paleta variada
   if (orbsContainer && hasData) {
     const orbCount = Math.min(5, Math.floor(2 + rhythm * 3 + groove * 2));
+    const orbVars = ['--semantic-color-primary', '--semantic-color-accent-warm', '--semantic-color-accent-cool', '--semantic-color-accent-triad-1', '--semantic-color-accent-triad-2'];
     while (orbsContainer.children.length < orbCount) {
       const orb = document.createElement('div');
       orb.className = 'live-theme-preview__orb';
-      orb.style.background = 'var(--semantic-color-primary)';
+      orb.style.background = `var(${orbVars[orbsContainer.children.length % orbVars.length]})`;
       orb.style.animationDelay = `${Math.random() * 2}s`;
       orb.style.left = `${Math.random() * 80 + 10}%`;
       orb.style.top = `${Math.random() * 70 + 15}%`;
@@ -278,7 +293,7 @@ export function updateLiveThemePreview(semantic, visual, progress = 0) {
     }
     orbsContainer.querySelectorAll('.live-theme-preview__orb').forEach((orb, i) => {
       orb.classList.toggle('is-visible', i < orbCount);
-      orb.style.background = i % 2 === 0 ? 'var(--semantic-color-primary)' : 'var(--semantic-color-accent-warm)';
+      orb.style.background = `var(${orbVars[i % orbVars.length]})`;
       orb.style.opacity = 0.2 + (e * 0.3 + rhythm * 0.2);
     });
   }

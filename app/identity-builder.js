@@ -17,15 +17,15 @@ export function initIdentityBuilder(container) {
         <div class="identity-builder__color-evolution" id="identity-color-evolution" aria-label="Evolución de colores en el tiempo"></div>
         <div class="identity-builder__swatches identity-builder__swatches--rich identity-builder__swatches--progressive" id="identity-swatches">
           <div class="identity-builder__swatch-wrap" data-swatch-index="0" title="Primary"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary)"></div><span>Primary</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="1" title="Subtle"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-subtle)"></div><span>Subtle</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="2" title="Strong"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-strong)"></div><span>Strong</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="3" title="Muted"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))"></div><span>Muted</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="4" title="Vivid"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-vivid, var(--semantic-color-primary-strong))"></div><span>Vivid</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="5" title="Warm"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-warm)"></div><span>Warm</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="6" title="Cool"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-cool)"></div><span>Cool</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="7" title="Comp"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-comp)"></div><span>Comp</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="8" title="Triad 1"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-triad-1)"></div><span>T1</span></div>
-          <div class="identity-builder__swatch-wrap" data-swatch-index="9" title="Triad 2"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-triad-2)"></div><span>T2</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="1" title="Warm"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-warm)"></div><span>Warm</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="2" title="Cool"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-cool)"></div><span>Cool</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="3" title="Comp"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-comp)"></div><span>Comp</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="4" title="Triad 1"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-triad-1)"></div><span>T1</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="5" title="Triad 2"><div class="identity-builder__swatch" style="background: var(--semantic-color-accent-triad-2)"></div><span>T2</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="6" title="Subtle"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-subtle)"></div><span>Subtle</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="7" title="Strong"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-strong)"></div><span>Strong</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="8" title="Muted"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-muted, var(--semantic-color-primary-subtle))"></div><span>Muted</span></div>
+          <div class="identity-builder__swatch-wrap" data-swatch-index="9" title="Vivid"><div class="identity-builder__swatch" style="background: var(--semantic-color-primary-vivid, var(--semantic-color-primary-strong))"></div><span>Vivid</span></div>
         </div>
       </div>
       <div class="identity-builder__section identity-builder__typography">

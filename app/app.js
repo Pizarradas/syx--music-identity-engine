@@ -23,6 +23,7 @@ import { initWidgetTokenInspector, updateWidgetTokenInspector } from './widget-t
 import { initWidgetAudioAnalysis, updateWidgetAudioAnalysis } from './widget-audio-analysis.js';
 import { initWidgetD3Analysis, updateWidgetD3Analysis, initWidgetD3Rhythm, updateWidgetD3Rhythm } from './widget-d3-analysis.js';
 import { initLiveThemePreview, updateLiveThemePreview } from './live-theme-preview.js';
+import { initPaletteOriginChart, updatePaletteOriginChart } from './palette-origin-chart.js';
 import { initCenterDataStage, updateCenterDataStage } from './center-data-stage.js';
 import { initDataAnalyticsPanel, updateDataAnalyticsPanel } from './data-analytics-panel.js';
 import { initAnalysisProgress, updateAnalysisProgress, hideAnalysisProgress } from './widget-analysis-progress.js';
@@ -33,8 +34,7 @@ import { initRipple, initFlash, updateRipple, triggerRipple, triggerFlash } from
 import { triggerParticleBurst } from './scene.js';
 import { setBPM, onBeat, checkBeat, clearBeatCallbacks, stopTransportSync } from './beat-sync.js';
 import { loadWaveform, setWaveformTime, destroyWaveform } from './waveform.js';
-import { downloadVisualizationPng, downloadChartPng, downloadReportHtml, downloadReportJson, downloadTokensJson, downloadTokensCss, downloadSyxTheme, openThemePreviewHtml } from './export-utils.js';
-import { getAlgorithmChart } from './algorithm-chart.js';
+import { downloadReportHtml, downloadTokensJson, downloadTokensCss, downloadThemePreviewHtml } from './export-utils.js';
 import { getVisualThrottle, isPageVisible } from './performance-utils.js';
 
 let sceneModule = null;
@@ -95,6 +95,9 @@ if (widgetD3RhythmEl) initWidgetD3Rhythm(widgetD3RhythmEl);
 
 const liveThemePreviewEl = document.getElementById('live-theme-preview');
 if (liveThemePreviewEl) initLiveThemePreview(liveThemePreviewEl);
+
+const paletteOriginChartEl = document.getElementById('palette-origin-chart');
+if (paletteOriginChartEl) initPaletteOriginChart(paletteOriginChartEl);
 
 const centerDataStageEl = document.getElementById('center-data-stage');
 if (centerDataStageEl) initCenterDataStage(centerDataStageEl);
@@ -251,13 +254,12 @@ function formatTime(sec) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/** Actualiza indicadores del flujo: completado, activo, bloqueado; habilita Ver HTML cuando hay pipeline */
+/** Actualiza indicadores del flujo: completado, activo, bloqueado; habilita Exportar cuando hay pipeline */
 function updateFlowSteps() {
   const hasFile = !!audioInput?.files?.[0];
   const hasPipeline = !!pipelineResult;
   const isPlaying = audioEl?.src && !audioEl?.paused;
   const outputPanel = document.getElementById('output-panel');
-  const btnPreviewHtml = document.getElementById('btn-preview-html');
 
   [1, 2, 3].forEach((n) => {
     const el = document.getElementById(`flow-step-${n}`);
@@ -299,11 +301,6 @@ function updateFlowSteps() {
     }
   });
 
-  if (btnPreviewHtml) {
-    btnPreviewHtml.disabled = !hasPipeline;
-    btnPreviewHtml.setAttribute('aria-disabled', String(!hasPipeline));
-    btnPreviewHtml.title = hasPipeline ? 'Abre una página HTML con todos los tokens aplicados' : 'Analiza primero para ver el HTML con tokens';
-  }
   const btnExportEl = document.getElementById('btn-export');
   if (btnExportEl) {
     btnExportEl.disabled = !hasPipeline;
@@ -359,17 +356,7 @@ function setupDragDrop(inputEl, isAudio) {
 
 setupDragDrop(audioInput, true);
 
-const btnPreviewHtml = document.getElementById('btn-preview-html');
-if (btnPreviewHtml) {
-  btnPreviewHtml.addEventListener('click', () => {
-    const foundations = lastTokenFoundations ?? (pipelineResult ? semanticToTokenFoundations(pipelineResult.getStateAtTime(0)?.semantic ?? {}, { keyHue: pipelineResult?.metadata?.keyHue }) : null);
-    const opts = pipelineResult ? { keyHue: pipelineResult?.metadata?.keyHue } : {};
-    const ok = openThemePreviewHtml(foundations, opts);
-    if (ok) setStatus('Vista previa HTML abierta.', 'ok');
-    else setStatus('Permite ventanas emergentes o analiza primero.', 'error');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  });
-}
+// HTML con identidad visual se exporta desde el menú Exportar
 
 const btnFreezeTheme = document.getElementById('btn-freeze-theme');
 if (btnFreezeTheme) {
@@ -399,13 +386,12 @@ if (btnExport && exportMenu) {
     btn.addEventListener('click', async (e) => {
       const action = e.currentTarget.dataset.export;
       exportMenu.hidden = true;
-      if (action === 'png') {
-        const ok = await downloadVisualizationPng();
-        setStatus(ok ? 'Captura PNG descargada.' : 'Export no disponible.', ok ? 'ok' : 'error');
-      } else if (action === 'chart') {
-        const chart = getAlgorithmChart();
-        const ok = downloadChartPng(chart);
-        setStatus(ok ? 'Gráfico PNG descargado.' : 'Sin gráfico.', ok ? 'ok' : 'error');
+      if (action === 'html-theme') {
+        const foundations = lastTokenFoundations ?? (pipelineResult ? semanticToTokenFoundations(pipelineResult.getStateAtTime(0)?.semantic ?? {}, { keyHue: pipelineResult?.metadata?.keyHue }) : null);
+        const opts = pipelineResult ? { keyHue: pipelineResult?.metadata?.keyHue } : {};
+        if (lastVisualState?.typography_font_family) opts.fontFamily = lastVisualState.typography_font_family;
+        downloadThemePreviewHtml(foundations, opts, trackName?.textContent || '—');
+        setStatus('HTML con identidad visual descargado.', 'ok');
       } else if (action === 'report') {
         const meta = pipelineResult?.metadata || {};
         downloadReportHtml(lastSemanticState || {}, {
@@ -413,13 +399,6 @@ if (btnExport && exportMenu) {
           duration: meta.duration,
         });
         setStatus('Informe HTML descargado.', 'ok');
-      } else if (action === 'json') {
-        if (pipelineResult) {
-          downloadReportJson(pipelineResult, trackName?.textContent || '—');
-          setStatus('JSON mapa de la canción descargado.', 'ok');
-        } else {
-          setStatus('Ejecuta el análisis primero.', 'error');
-        }
       } else if (action === 'tokens-json') {
         const foundations = lastTokenFoundations ?? (pipelineResult ? semanticToTokenFoundations(pipelineResult.getStateAtTime(0)?.semantic ?? {}, { keyHue: pipelineResult?.metadata?.keyHue }) : null);
         if (foundations) {
@@ -431,18 +410,10 @@ if (btnExport && exportMenu) {
       } else if (action === 'tokens-css') {
         const foundations = lastTokenFoundations ?? (pipelineResult ? semanticToTokenFoundations(pipelineResult.getStateAtTime(0)?.semantic ?? {}, { keyHue: pipelineResult?.metadata?.keyHue }) : null);
         if (foundations) {
-          const keyHue = pipelineResult?.metadata?.keyHue;
-          downloadTokensCss(foundations, { keyHue }, trackName?.textContent || '—');
+          const opts = { keyHue: pipelineResult?.metadata?.keyHue };
+          if (lastVisualState?.typography_font_family) opts.fontFamily = lastVisualState.typography_font_family;
+          downloadTokensCss(foundations, opts, trackName?.textContent || '—');
           setStatus('CSS custom properties descargado.', 'ok');
-        } else {
-          setStatus('Ejecuta el análisis primero.', 'error');
-        }
-      } else if (action === 'syx-theme') {
-        const foundations = lastTokenFoundations ?? (pipelineResult ? semanticToTokenFoundations(pipelineResult.getStateAtTime(0)?.semantic ?? {}, { keyHue: pipelineResult?.metadata?.keyHue }) : null);
-        if (foundations) {
-          const keyHue = pipelineResult?.metadata?.keyHue;
-          downloadSyxTheme(foundations, { keyHue }, trackName?.textContent || '—');
-          setStatus('SYX theme config descargado.', 'ok');
         } else {
           setStatus('Ejecuta el análisis primero.', 'error');
         }
@@ -487,8 +458,10 @@ btnRun.addEventListener('click', async () => {
       keyHue,
       keyConfidence,
       fingerprint: trackFingerprint,
+      bandData: lastBandData ?? {},
     });
     updateLiveThemePreview(initSemantic, initVisual, 1);
+    updatePaletteOriginChart(initSemantic, lastBandData ?? {}, initVisual);
     applyVisualToSyx(initVisual);
     lastVisualState = initVisual;
     lastSemanticState = initSemantic;
@@ -529,6 +502,7 @@ function updateStateAtTime(t, result) {
     keyHue,
     keyConfidence,
     accumulated: accumulated ? { mean: accumulated.mean } : null,
+    bandData: lastBandData ?? {},
   });
   lastVisualState = visual;
   lastTokenFoundations = semanticToTokenFoundations(semantic, {
@@ -613,6 +587,7 @@ function updateStateAtTime(t, result) {
   const progress = result?.metadata?.duration ? Math.min(1, Math.max(0, t / result.metadata.duration)) : 1;
   updateIdentityBuilder(semantic, visual, progress);
   updateLiveThemePreview(semantic, visual, progress);
+  updatePaletteOriginChart(semantic, lastBandData, visual);
   updateCenterDataStage(semantic, t, result);
   updateDataAnalyticsPanel(semantic, t, result);
   updateMapProgress(t, result);
@@ -668,7 +643,10 @@ function setupPlayer(audioFile, result) {
   connectAudio(audioEl);
   onBandData((data) => { lastBandData = data; });
 
-  trackFingerprint = computeTrackFingerprint(result.semantic?.states, 'all');
+  trackFingerprint = computeTrackFingerprint(result.semantic?.states, 'all', {
+    durationSec: result.metadata?.duration ?? 0,
+    trackName: audioFile?.name ?? '',
+  });
 
   if (headerBpm) {
     headerBpm.textContent = result.metadata.bpm ? `${result.metadata.bpm} BPM` : '';
