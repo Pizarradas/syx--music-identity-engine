@@ -99,8 +99,8 @@ export async function detectKey(buffer) {
 
   const data = getChannelData(buffer);
   const sr = buffer.sampleRate;
-  const fftSize = 2048;
-  const hopMs = config.analysis.shortWindowMs ?? 50;
+  const fftSize = config.analysis.fftSize ?? 4096;
+  const hopMs = config.analysis.shortWindowMs ?? 45;
   const hopSamples = Math.round((hopMs / 1000) * sr);
 
   const chromaSum = new Array(12).fill(0);

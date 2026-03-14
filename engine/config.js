@@ -14,10 +14,10 @@ export const config = {
     },
   },
   analysis: {
-    shortWindowMs: 50,
-    mediumWindowMs: 2000,
+    shortWindowMs: 45,
+    mediumWindowMs: 2200,
     longWindowMs: 15000,
-    fftSize: 2048,
+    fftSize: 4096,
     smoothingTimeConstant: 0.8,
     /**
      * true = Worker (rápido, sin Meyda): solo RMS, ZCR, bandas, flux aproximado.
@@ -27,7 +27,7 @@ export const config = {
     useWorker: true,
   },
   semantic: {
-    smoothingAlpha: 0.06,
+    smoothingAlpha: 0.05,
     energyWeight: 1,
     timbralWeight: 1,
     tensionWeight: 1,

@@ -117,11 +117,12 @@ export function computeAccumulatedStateUpTo(semanticStates, endIndex, opts = {})
 
 /**
  * Fingerprint del track — media semántica para hue base y saturación.
- * Por defecto usa los primeros 60 estados (intro); con sampleCount='all' usa toda la canción.
+ * Incluye variación por duración/n estados para diferenciar tracks similares.
  * @param {Array<Object>} semanticStates
  * @param {number|'all'} sampleCount - 60 por defecto, 'all' para canción completa
+ * @param {{ durationSec?: number, trackName?: string }} metadata - para variación cromática por track
  */
-export function computeTrackFingerprint(semanticStates, sampleCount = 60) {
+export function computeTrackFingerprint(semanticStates, sampleCount = 60, metadata = {}) {
   if (!semanticStates?.length) return null;
   const useAll = sampleCount === 'all' || sampleCount === Infinity;
   const n = useAll ? semanticStates.length : Math.min(sampleCount, semanticStates.length);
@@ -159,13 +160,23 @@ export function computeTrackFingerprint(semanticStates, sampleCount = 60) {
   profiles.sort((a, b) => b.score - a.score);
   const dominant = profiles[0];
   const secondary = profiles[1];
+  const tertiary = profiles[2];
 
   let hueSeed = dominant.score > 0.1 ? dominant.hue : 200;
   if (secondary && secondary.score > 0.15) {
-    hueSeed = hueSeed * 0.7 + secondary.hue * 0.3;
+    hueSeed = hueSeed * 0.65 + secondary.hue * 0.35;
   }
-  const spectralBias = (bassW - trebleW) * 60;
+  if (tertiary && tertiary.score > 0.12 && Math.abs(hueSeed - tertiary.hue) > 60) {
+    hueSeed = hueSeed * 0.9 + tertiary.hue * 0.1;
+  }
+  const spectralBias = (bassW - trebleW) * 80;
   hueSeed = (hueSeed + spectralBias + 360) % 360;
+
+  // Variación por track: hash simple de duración + longitud para evitar paletas idénticas
+  const dur = metadata.durationSec ?? 0;
+  const nameLen = (metadata.trackName ?? '').length;
+  const trackSeed = ((dur * 7 + n * 13 + nameLen * 31) % 360);
+  hueSeed = (hueSeed + trackSeed * 0.15 + 360) % 360;
 
   const satSeed = 0.25 + energy * 0.5 + (1 - tension) * 0.25 + (rhythm + groove) * 0.1;
 

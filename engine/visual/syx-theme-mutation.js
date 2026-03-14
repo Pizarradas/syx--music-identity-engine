@@ -50,18 +50,25 @@ export function applyVisualToSyx(visual) {
 
   const t = Date.now() / 1000;
   const hue = hueWithOscillation(hueBase + hueOffset * 80 + (temp - 0.5) * 120, hueOscillation, t);
-  // Acentos que recorren toda la rueda: warm→naranja/rojo, cool→cian/verde
-  const hueWarm = (hue + 60 + accentHueShift + 360) % 360;
-  const hueCool = (hue - 60 + accentHueShift + 360) % 360;
+  // Acentos más separados (±100°): paleta más diferenciada entre tracks
+  const hueWarm = (hue + 100 + accentHueShift + 360) % 360;
+  const hueCool = (hue - 100 + accentHueShift + 360) % 360;
   const hueComp = (hue + 180 + 360) % 360;
   const hueTriad1 = (hue + 120 + 360) % 360;
   const hueTriad2 = (hue + 240 + 360) % 360;
+  const hueSplit1 = (hue + 150 + 360) % 360;
+  const hueSplit2 = (hue + 210 + 360) % 360;
+  const hueTetrad = (hue + 90 + 360) % 360;
 
-  // Croma amplificado: canciones distintas → paletas más diferenciadas (muted vs vivid)
+  // OKLCH: L y C independientes — variación perceptualmente uniforme
   const chromaPulse = Math.sin(t * 2.5) * 0.03 * motion;
   const lightnessPulse = Math.sin(t * 1.8) * 0.02 * tension;
-  const chroma = clamp(0.12 + sat * 0.6 + chromaPulse, 0.1, 0.7);
-  const lightness = clamp(0.48 + (contrast - 0.5) * 0.32 + lightnessPulse, 0.32, 0.78);
+  const chroma = clamp(0.12 + sat * 0.65 + chromaPulse, 0.08, 0.42);
+  const lightness = clamp(0.48 + (contrast - 0.5) * 0.35 + lightnessPulse, 0.28, 0.82);
+  const chromaMuted = chroma * 0.35;
+  const chromaVivid = Math.min(0.45, chroma * 1.4);
+  const lightnessDark = Math.max(0.2, lightness - 0.15);
+  const lightnessLight = Math.min(0.92, lightness + 0.18);
 
   const motionMod = visualMode < 0.3 ? 0.5 : visualMode > 0.7 ? 1.35 : 0.9;
   root.style.setProperty('--syx-music-transition', `${320 + motion * 180 * motionMod}ms`);
@@ -69,9 +76,12 @@ export function applyVisualToSyx(visual) {
   root.style.setProperty('--syx-music-hue', String(hue));
   root.style.setProperty('--syx-music-chroma', String(chroma));
   root.style.setProperty('--syx-music-lightness', String(lightness));
+  root.style.setProperty('--oklch-primary-l', String(lightness));
+  root.style.setProperty('--oklch-primary-c', String(chroma));
+  root.style.setProperty('--oklch-primary-h', `${hue}`);
   root.style.setProperty('--syx-music-primary', `oklch(${lightness} ${chroma} ${hue})`);
-  root.style.setProperty('--syx-music-primary-subtle', `oklch(${lightness + 0.08} ${chroma * 0.5} ${hue})`);
-  root.style.setProperty('--syx-music-primary-strong', `oklch(${Math.max(0.3, lightness - 0.1)} ${chroma * 1.2} ${hue})`);
+  root.style.setProperty('--syx-music-primary-subtle', `oklch(${lightness + 0.08} ${chromaMuted} ${hue})`);
+  root.style.setProperty('--syx-music-primary-strong', `oklch(${lightnessDark} ${chromaVivid} ${hue})`);
 
   const intensityMod = visualMode < 0.3 ? 0.8 : visualMode > 0.7 ? 1.2 : 1.0;
   const ambientIntensity = (0.06 + tension * 0.35) * intensityMod;
@@ -83,18 +93,59 @@ export function applyVisualToSyx(visual) {
   root.style.setProperty('--music-bg-hue', String(hue));
   root.style.setProperty('--music-bg-intensity', String(bgIntensity));
 
+  // Colores de fondo derivados de la paleta — variación cromática sutil
+  const bgBase = `oklch(0.12 ${chroma * 0.15} ${hue})`;
+  const bgElevated = `oklch(0.16 ${chroma * 0.12} ${hue})`;
+  const bgSubtle = `oklch(0.14 ${chroma * 0.2} ${(hue + 30) % 360})`;
+  const bgAccent = `oklch(0.1 ${chroma * 0.08} ${hueCool})`;
+  root.style.setProperty('--surface-bg', bgBase);
+  root.style.setProperty('--surface-bg-elevated', bgElevated);
+  root.style.setProperty('--surface-bg-subtle', bgSubtle);
+  root.style.setProperty('--surface-bg-accent', bgAccent);
+
+  // Sistema de espacios — derivado de spatial_density (density ya declarado arriba)
+  const spaceBase = 0.25 + (1 - density) * 0.5;
+  root.style.setProperty('--space-xs', `${spaceBase * 0.5}rem`);
+  root.style.setProperty('--space-sm', `${spaceBase}rem`);
+  root.style.setProperty('--space-md', `${spaceBase * 1.5}rem`);
+  root.style.setProperty('--space-lg', `${spaceBase * 2.5}rem`);
+  root.style.setProperty('--space-xl', `${spaceBase * 4}rem`);
+  root.style.setProperty('--space-2xl', `${spaceBase * 6}rem`);
+  root.style.setProperty('--space-3xl', `${spaceBase * 8}rem`);
+
+  // Line-height para escala tipográfica
+  const typeScale = 0.85 + weight * 0.35 + expansion * 0.2;
+  root.style.setProperty('--line-height-tight', '1.2');
+  root.style.setProperty('--line-height-normal', '1.5');
+  root.style.setProperty('--line-height-relaxed', '1.65');
+
   root.style.setProperty('--semantic-color-primary', `oklch(${lightness} ${chroma} ${hue})`);
   root.style.setProperty('--semantic-color-primary-subtle', `oklch(${lightness + 0.08} ${chroma * 0.6} ${hue})`);
-  root.style.setProperty('--semantic-color-accent-warm', `oklch(${lightness} ${chroma * 1.1} ${hueWarm})`);
-  root.style.setProperty('--semantic-color-accent-cool', `oklch(${lightness} ${chroma * 1.1} ${hueCool})`);
-  root.style.setProperty('--semantic-color-accent-comp', `oklch(${lightness * 0.95} ${chroma * 0.7} ${hueComp})`);
-  root.style.setProperty('--semantic-color-accent-triad-1', `oklch(${lightness + 0.04} ${chroma * 0.85} ${hueTriad1})`);
-  root.style.setProperty('--semantic-color-accent-triad-2', `oklch(${lightness + 0.04} ${chroma * 0.85} ${hueTriad2})`);
-  // Paleta extendida: variantes de luminosidad para más riqueza
-  root.style.setProperty('--semantic-color-primary-muted', `oklch(${lightness + 0.12} ${chroma * 0.4} ${hue})`);
-  root.style.setProperty('--semantic-color-primary-vivid', `oklch(${Math.max(0.25, lightness - 0.08)} ${chroma * 1.3} ${hue})`);
-  root.style.setProperty('--semantic-color-accent-warm-muted', `oklch(${lightness + 0.1} ${chroma * 0.6} ${hueWarm})`);
-  root.style.setProperty('--semantic-color-accent-cool-muted', `oklch(${lightness + 0.1} ${chroma * 0.6} ${hueCool})`);
+  root.style.setProperty('--semantic-color-accent-warm', `oklch(${lightness} ${chromaVivid} ${hueWarm})`);
+  root.style.setProperty('--semantic-color-accent-cool', `oklch(${lightness} ${chromaVivid} ${hueCool})`);
+  root.style.setProperty('--semantic-color-accent-comp', `oklch(${lightness * 0.95} ${chroma * 0.95} ${hueComp})`);
+  root.style.setProperty('--semantic-color-accent-triad-1', `oklch(${lightness + 0.04} ${chromaVivid} ${hueTriad1})`);
+  root.style.setProperty('--semantic-color-accent-triad-2', `oklch(${lightness + 0.04} ${chromaVivid} ${hueTriad2})`);
+  root.style.setProperty('--semantic-color-accent-split-1', `oklch(${lightness + 0.06} ${chroma * 0.9} ${hueSplit1})`);
+  root.style.setProperty('--semantic-color-accent-split-2', `oklch(${lightness + 0.06} ${chroma * 0.9} ${hueSplit2})`);
+  root.style.setProperty('--semantic-color-accent-tetrad', `oklch(${lightnessLight * 0.9} ${chroma * 0.85} ${hueTetrad})`);
+  root.style.setProperty('--semantic-color-primary-muted', `oklch(${lightnessLight} ${chromaMuted} ${hue})`);
+  root.style.setProperty('--semantic-color-primary-vivid', `oklch(${lightnessDark} ${chromaVivid} ${hue})`);
+  root.style.setProperty('--semantic-color-accent-warm-muted', `oklch(${lightnessLight} ${chroma * 0.55} ${hueWarm})`);
+  root.style.setProperty('--semantic-color-accent-cool-muted', `oklch(${lightnessLight} ${chroma * 0.55} ${hueCool})`);
+
+  // Tokens tipográficos — cada nivel usa un tono distinto de la paleta para riqueza cromática
+  root.style.setProperty('--semantic-color-type-display', `oklch(${lightness} ${chromaVivid} ${hue})`);
+  root.style.setProperty('--semantic-color-type-h1', `oklch(${lightness} ${chromaVivid} ${hueWarm})`);
+  root.style.setProperty('--semantic-color-type-h2', `oklch(${lightness + 0.04} ${chroma * 0.9} ${hueCool})`);
+  root.style.setProperty('--semantic-color-type-h3', `oklch(${lightness + 0.04} ${chromaVivid} ${hueTriad1})`);
+  root.style.setProperty('--semantic-color-type-body', `oklch(${lightnessLight} ${chromaMuted} ${hue})`);
+  root.style.setProperty('--semantic-color-type-caption', `oklch(${lightnessLight} ${chroma * 0.5} ${hueCool})`);
+  // Tokens para botones/badges secundarios
+  root.style.setProperty('--semantic-color-btn-outline', `oklch(${lightness} ${chromaVivid} ${hueWarm})`);
+  root.style.setProperty('--semantic-color-btn-ghost', `oklch(${lightness + 0.06} ${chroma * 0.9} ${hueCool})`);
+  root.style.setProperty('--semantic-color-badge-outline', `oklch(${lightness} ${chromaVivid} ${hueTriad1})`);
+  root.style.setProperty('--semantic-color-badge-soft', `oklch(${lightnessLight} ${chroma * 0.55} ${hueCool})`);
 
   const center = typeof document !== 'undefined' ? document.querySelector('.org-app-center') : null;
   if (center) {
@@ -160,6 +211,36 @@ export function resetSyxTheme() {
   root.style.removeProperty('--semantic-color-primary-vivid');
   root.style.removeProperty('--semantic-color-accent-warm-muted');
   root.style.removeProperty('--semantic-color-accent-cool-muted');
+  root.style.removeProperty('--semantic-color-accent-split-1');
+  root.style.removeProperty('--semantic-color-accent-split-2');
+  root.style.removeProperty('--semantic-color-accent-tetrad');
+  root.style.removeProperty('--semantic-color-type-display');
+  root.style.removeProperty('--semantic-color-type-h1');
+  root.style.removeProperty('--semantic-color-type-h2');
+  root.style.removeProperty('--semantic-color-type-h3');
+  root.style.removeProperty('--semantic-color-type-body');
+  root.style.removeProperty('--semantic-color-type-caption');
+  root.style.removeProperty('--semantic-color-btn-outline');
+  root.style.removeProperty('--semantic-color-btn-ghost');
+  root.style.removeProperty('--semantic-color-badge-outline');
+  root.style.removeProperty('--semantic-color-badge-soft');
+  root.style.removeProperty('--surface-bg');
+  root.style.removeProperty('--surface-bg-elevated');
+  root.style.removeProperty('--surface-bg-subtle');
+  root.style.removeProperty('--surface-bg-accent');
+  root.style.removeProperty('--space-xs');
+  root.style.removeProperty('--space-sm');
+  root.style.removeProperty('--space-md');
+  root.style.removeProperty('--space-lg');
+  root.style.removeProperty('--space-xl');
+  root.style.removeProperty('--space-2xl');
+  root.style.removeProperty('--space-3xl');
+  root.style.removeProperty('--line-height-tight');
+  root.style.removeProperty('--line-height-normal');
+  root.style.removeProperty('--line-height-relaxed');
+  root.style.removeProperty('--oklch-primary-l');
+  root.style.removeProperty('--oklch-primary-c');
+  root.style.removeProperty('--oklch-primary-h');
   root.style.removeProperty('--music-visual-mode');
   root.style.removeProperty('--ripple-intensity');
   body.removeAttribute('data-visual-preset');

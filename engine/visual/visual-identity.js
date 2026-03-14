@@ -46,6 +46,47 @@ const VISUAL_KEYS = [
   'lyric_prominence', 'particle_density_factor',
 ];
 
+/** Claves de los 5 parámetros que definen la paleta */
+const PALETTE_PARAM_KEYS = ['energy_level', 'harmonic_tension', 'timbral_brightness', 'rhythmic_pressure', 'groove'];
+
+/**
+ * Hues dinámicos por parámetro — derivados del audio, no predefinidos.
+ * Cada parámetro tiene afinidad espectral: bass→cálido, mids→verde, highs→frío.
+ * spectral_width y dynamic_range amplían el spread cromático.
+ * @param {Object} semantic - estado semántico
+ * @param {number} hueBase - hue base del track (fingerprint/key/instrument)
+ * @param {Object} bandData - { bass, mids, highs } 0-1
+ * @returns {number[]} 5 hues (0-360), uno por parámetro
+ */
+function computeParamHues(semantic, hueBase, bandData = {}) {
+  const bass = bandData.bass ?? semantic.bass_weight ?? 0.33;
+  const highs = bandData.highs ?? semantic.treble_weight ?? 0.33;
+  const mids = bandData.mids ?? Math.max(0, 1 - bass - highs);
+  const sw = semantic.spectral_width ?? 0.5;
+  const dyn = semantic.dynamic_range ?? 0.5;
+  const chromaStr = semantic.chroma_strength ?? 0.5;
+  const pitchClass = semantic.dominant_pitch_class ?? -1;
+
+  const spread = 0.5 + sw * 0.8 + dyn * 0.4;
+  const chromaHue = pitchClass >= 0 ? (pitchClass / 12) * 360 : hueBase;
+
+  const mod = (base, bandInfluence, chromaMix = 0) => {
+    let h = base + bandInfluence;
+    if (chromaStr > 0.3 && chromaMix > 0) {
+      h = h * (1 - chromaStr * chromaMix) + chromaHue * chromaStr * chromaMix;
+    }
+    return (h + 360) % 360;
+  };
+
+  return [
+    mod(hueBase, (bass - 0.33) * 90 + (1 - highs) * 50, 0.4),
+    mod(hueBase + 110, (highs - 0.33) * 100 + (1 - bass) * 30, 0.5),
+    mod(hueBase + 220, (highs - 0.33) * 80 + (mids - 0.33) * 40, 0.35),
+    mod(hueBase + 280, (mids - 0.33) * 90 + (bass - 0.33) * -30, 0.3),
+    mod(hueBase + 340, (bass - 0.33) * 70 + (1 - mids) * 40, 0.45),
+  ];
+}
+
 /**
  * Mapeo tonal → hue
  * tonal_stability alto + tension bajo ≈ mayor/más cálido
@@ -266,7 +307,7 @@ export function semanticToVisual(semantic, context = {}) {
   const instrumentHue = instrumentToHueBase(blended);
   const keyConfidence = context.keyConfidence ?? 0.5;
   let hueBase;
-  if (keyHue != null && keyConfidence > 0.4) {
+  if (keyHue != null && keyConfidence > 0.3) {
     const keyWeight = 0.5 + keyConfidence * 0.4;
     const charWeight = 1 - keyWeight;
     hueBase = (keyHue * keyWeight + instrumentHue * charWeight + 360) % 360;
@@ -305,36 +346,53 @@ export function semanticToVisual(semantic, context = {}) {
   const particleDensityBoost = spectralRichness * 0.3;
   const particleDensityFactor = clamp(d * 0.5 + (1 - displayMode) * 0.4 + groove * 0.2 + particleDensityBoost, 0.3, 1);
 
-  if (particleChromaHue >= 0 && particleChromaStrength > 0.4) {
+  if (particleChromaHue >= 0 && particleChromaStrength > 0.3) {
     const chromaHueDeg = particleChromaHue * 360;
     hueBase = hueBase * (1 - particleChromaStrength * 0.6) + chromaHueDeg * particleChromaStrength * 0.6;
   }
 
+  const bandData = context.bandData ?? {};
+  const paramHues = computeParamHues(blended, hueBase, bandData);
+  const paramWeights = PALETTE_PARAM_KEYS.map((k) => blended[k] ?? 0.5);
+  const totalW = paramWeights.reduce((a, b) => a + b, 0) || 1;
+  const weights = paramWeights.map((w) => w / totalW);
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const x = weights.reduce((acc, w, i) => acc + Math.cos(toRad(paramHues[i])) * w, 0);
+  const y = weights.reduce((acc, w, i) => acc + Math.sin(toRad(paramHues[i])) * w, 0);
+  hueBase = (Math.atan2(y, x) * 180) / Math.PI;
+  if (hueBase < 0) hueBase += 360;
+
   /**
-   * Familia tipográfica según carácter musical — todas las categorías.
-   * Display: metal, punk, EDM, hip-hop, latin (impactante)
-   * Geométrica: electrónica, indie, rock alternativo (moderna)
-   * Editorial: pop, clásica, jazz, folk, R&B, country, blues, ambient (elegante/legible)
+   * Familia tipográfica según carácter musical — 4 categorías con amplio pool.
+   * Cada categoría tiene varias opciones; se elige por índice derivado del fingerprint.
    */
-  const fontFamilies = {
-    editorial: '"Cormorant Garamond", "Lora", Georgia, serif',
-    geometric: '"Space Grotesk", "DM Sans", "Outfit", system-ui, sans-serif',
-    display: '"Bebas Neue", "Syne", "Archivo Black", system-ui, sans-serif',
+  const fontPools = {
+    editorial: ['Cormorant Garamond', 'Lora', 'Playfair Display', 'Libre Baskerville', 'EB Garamond', 'Merriweather', 'Source Serif Pro', 'Alegreya', 'Crimson Text', 'PT Serif'],
+    geometric: ['Space Grotesk', 'DM Sans', 'Outfit', 'Inter', 'Nunito', 'Work Sans', 'Manrope', 'Plus Jakarta Sans', 'Figtree', 'Poppins', 'Raleway', 'Montserrat'],
+    display: ['Bebas Neue', 'Syne', 'Archivo Black', 'Oswald', 'Russo One', 'Righteous', 'Titillium Web', 'Black Ops One', 'Orbitron', 'Audiowide', 'Rajdhani', 'Exo 2'],
+    slab: ['Roboto Slab', 'Zilla Slab', 'Josefin Slab', 'Encode Sans Condensed', 'Anton', 'Barlow Condensed', 'Oswald', 'Staatliches', 'Bebas Neue', 'Archivo Narrow'],
   };
-  const fontCategoryLabels = { editorial: 'Serifa', geometric: 'Sans-serif', display: 'Display' };
+  const pickFont = (pool, seed) => pool[Math.floor(seed * pool.length) % pool.length];
+  const fontSeed = ((blended.spectral_width ?? 0.5) * 7 + (blended.dynamic_range ?? 0.5) * 11 + (blended.groove ?? 0.5) * 13) % 1;
+  const fontFamilies = {
+    editorial: `"${pickFont(fontPools.editorial, fontSeed)}", "Lora", Georgia, serif`,
+    geometric: `"${pickFont(fontPools.geometric, fontSeed + 0.3)}", "DM Sans", system-ui, sans-serif`,
+    display: `"${pickFont(fontPools.display, fontSeed + 0.6)}", "Syne", system-ui, sans-serif`,
+    slab: `"${pickFont(fontPools.slab, fontSeed + 0.9)}", "Roboto Slab", system-ui, serif`,
+  };
+  const fontCategoryLabels = { editorial: 'Serifa', geometric: 'Sans-serif', display: 'Display', slab: 'Slab' };
   const perc = blended.percussion_presence ?? 0.5;
   const aggressiveChar = e * 0.3 + rhythm * 0.25 + (1 - org) * 0.25 + t * 0.15;
   const electronicChar = (1 - org) * 0.4 + b * 0.25 + perc * 0.2;
   const hipHopLatinChar = groove * 0.4 + perc * 0.35 + rhythm * 0.25;
   const organicVocalChar = org * 0.35 + vocalPresence * 0.3 + melodicProminence * 0.25;
+  const industrialSlabChar = (1 - org) * 0.35 + perc * 0.3 + t * 0.2 + d * 0.15;
   const displayScore = (aggressiveChar > 0.55 ? 0.5 : 0) + (hipHopLatinChar > 0.5 ? 0.35 : 0) + (e > 0.8 && i > 0.6 ? 0.4 : 0);
-  const geometricScore = electronicChar * 0.6 + (1 - org) * 0.25 + percussiveVsPitched * 0.2;
+  const geometricScore = electronicChar * 0.5 + (1 - org) * 0.2 + percussiveVsPitched * 0.2 - (industrialSlabChar > 0.5 ? 0.15 : 0);
+  const slabScore = industrialSlabChar * 0.8 + (b > 0.6 && perc > 0.5 ? 0.25 : 0);
   const editorialScore = organicVocalChar + (org > 0.55 ? 0.3 : 0) + (melodicProminence > 0.5 ? 0.25 : 0);
-  const familyKey = displayScore > geometricScore && displayScore > editorialScore
-    ? 'display'
-    : geometricScore > editorialScore
-      ? 'geometric'
-      : 'editorial';
+  const scores = { display: displayScore, geometric: geometricScore, slab: slabScore, editorial: editorialScore };
+  const familyKey = Object.entries(scores).reduce((a, b) => (b[1] > a[1] ? b : a))[0];
   const fontFamily = fontFamilies[familyKey];
   const typography_font_category = fontCategoryLabels[familyKey];
   const fontItalic = clamp(i * 0.6 + melodicProminence * 0.3 + (1 - org) * 0.2, 0, 1);
@@ -382,6 +440,7 @@ export function semanticToVisual(semantic, context = {}) {
     particle_chroma_strength: particleChromaStrength,
     particle_size_factor: particleSizeFactor,
     particle_density_boost: particleDensityBoost,
+    param_hues: paramHues,
   };
 }
 

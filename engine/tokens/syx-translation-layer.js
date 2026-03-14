@@ -133,9 +133,10 @@ export function foundationsToSyxTheme(foundations, options = {}) {
 /**
  * Convierte tema SYX a CSS custom properties (para inyección en :root)
  * @param {Object} syxTheme - Salida de foundationsToSyxTheme
+ * @param {Object} options - { fontFamily } para tipografía (cuando viene de visual identity)
  * @returns {Object} { root: { '--syx-*': value }, center?: { '--music-*': value } }
  */
-export function syxThemeToCssVars(syxTheme) {
+export function syxThemeToCssVars(syxTheme, options = {}) {
   const c = syxTheme.color;
   const t = syxTheme.typography;
   const s = syxTheme.space;
@@ -152,6 +153,11 @@ export function syxThemeToCssVars(syxTheme) {
   const accentTriad1 = `oklch(${lightnessNum + 0.04} ${chromaNum * 0.85} ${hueTriad1})`;
   const accentTriad2 = `oklch(${lightnessNum + 0.04} ${chromaNum * 0.85} ${hueTriad2})`;
 
+  const hueCool = (c.hue - 60 + 360) % 360;
+  const bgBase = `oklch(0.12 ${chromaNum * 0.15} ${c.hue})`;
+  const bgElevated = `oklch(0.16 ${chromaNum * 0.12} ${c.hue})`;
+  const bgSubtle = `oklch(0.14 ${chromaNum * 0.2} ${(c.hue + 30) % 360})`;
+  const bgAccent = `oklch(0.1 ${chromaNum * 0.08} ${hueCool})`;
   const root = {
     '--syx-music-hue': String(c.hue),
     '--syx-music-chroma': String(c.chroma),
@@ -170,18 +176,33 @@ export function syxThemeToCssVars(syxTheme) {
     '--semantic-color-accent-comp': c.accentComp,
     '--semantic-color-accent-triad-1': accentTriad1,
     '--semantic-color-accent-triad-2': accentTriad2,
+    '--surface-bg': bgBase,
+    '--surface-bg-elevated': bgElevated,
+    '--surface-bg-subtle': bgSubtle,
+    '--surface-bg-accent': bgAccent,
+    '--space-xs': '0.25rem',
+    '--space-sm': s.spacingSm || '0.5rem',
+    '--space-md': s.spacingMd || '0.75rem',
+    '--space-lg': s.spacingLg || '1.25rem',
+    '--space-xl': '2rem',
+    '--space-2xl': '3rem',
+    '--space-3xl': '4rem',
+    '--line-height-tight': '1.2',
+    '--line-height-normal': '1.5',
+    '--line-height-relaxed': '1.65',
     '--music-bg-hue': String(c.hue),
     '--music-bg-intensity': String(0.06 + chromaNum * 0.3),
     '--music-ambient-intensity': String(0.06 + sf.shadowOpacity * 0.5),
     '--music-stage-intensity': String(0.1 + sf.shadowOpacity * 0.4),
   };
 
+  const fontFamily = options.fontFamily ?? '"DM Sans", system-ui, sans-serif';
   const center = {
     '--music-center-spacing': s.spacing,
     '--music-center-radius': sh.radiusMd,
     '--music-center-transition-duration': m.duration,
     '--music-center-font-weight': String(t.weight),
-    '--music-center-font-family': '"DM Sans", system-ui, sans-serif',
+    '--music-center-font-family': fontFamily,
     '--music-center-letter-spacing': t.letterSpacing,
     '--music-type-display': '2rem',
     '--music-type-h1': '1.5rem',
@@ -196,9 +217,9 @@ export function syxThemeToCssVars(syxTheme) {
 /**
  * Aplica tema SYX al DOM (document.documentElement y .org-app-center)
  */
-export function applySyxThemeToDom(syxTheme) {
+export function applySyxThemeToDom(syxTheme, options = {}) {
   if (typeof document === 'undefined') return;
-  const { root, center } = syxThemeToCssVars(syxTheme);
+  const { root, center } = syxThemeToCssVars(syxTheme, options);
   const el = document.documentElement;
   const centerEl = document.querySelector('.org-app-center');
   for (const [k, v] of Object.entries(root)) el.style.setProperty(k, v);
