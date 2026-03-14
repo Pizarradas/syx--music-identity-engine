@@ -1,33 +1,34 @@
 # SYX Music Identity Engine
 
-Motor de identidad visual que traduce música en diseño en tiempo real. Analiza características de audio (energía, espectro, ritmo) y genera paletas de colores, tipografía y tokens de diseño dinámicamente usando la arquitectura SYX.
+Motor de identidad visual que traduce música en diseño en tiempo real. Analiza características de audio y genera paletas de colores, tipografía, espacios y componentes dinámicamente.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## ✨ Características
 
-- **Análisis de audio en tiempo real** — Extrae más de 20 variables semánticas (energía, tensión armónica, brillo tímbrico, groove, organicidad, etc.)
-- **Identidad visual dinámica** — Colores, tipografía y componentes que reaccionan al compás de la música
-- **Diferenciación por género** — Resultados distintos según el estilo: metal, pop, clásica, jazz, hip-hop, electrónica, R&B, folk, reggae, latin, blues, ambient y más
-- **Exportación** — PNG, JSON, informe HTML, tokens CSS, configuración SYX
-- **Vista previa HTML** — Genera una página con la identidad aplicada para inspección o uso en otros proyectos
+- **Análisis de audio** — Extrae más de 20 variables semánticas (energía, tensión armónica, brillo tímbrico, groove, organicidad, etc.) con FFT 4096 y ventanas de 45 ms para mayor precisión
+- **Paleta cromática dinámica** — Colores derivados del audio (Energía, Tensión, Brillo, Ritmo, Groove) con hues calculados en tiempo real, no predefinidos
+- **Tipografía adaptativa** — Pool de ~45 fuentes Google Fonts en 4 categorías (Editorial, Geométrica, Display, Slab) según el carácter musical
+- **Sistema de espacios** — Tokens de espaciado (xs–3xl) y colores de fondo derivados de la paleta
+- **Exportación** — HTML con identidad visual integrada, informe HTML, JSON tokens, CSS custom properties
+- **Gráfico Música → Paleta** — Visualización circular de cómo cada parámetro contribuye al color resultante
 
 ## 🚀 Demo
 
 Si el proyecto está desplegado en GitHub Pages:
 
 ```
-https://[tu-usuario].github.io/syx--music-identity-engine/app/
+https://[tu-usuario].github.io/syx-music-identity-engine/app/
 ```
 
 ## 📦 Instalación y ejecución local
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/[tu-usuario]/syx--music-identity-engine.git
-cd syx--music-identity-engine
+git clone https://github.com/[tu-usuario]/syx-music-identity-engine.git
+cd syx-music-identity-engine
 
-# Instalar dependencias (opcional, para desarrollo)
+# Instalar dependencias (opcional)
 npm install
 
 # Ejecutar (requiere servidor HTTP por ES modules)
@@ -43,12 +44,18 @@ npm start
 1. **Sube audio** — Arrastra o selecciona un archivo WAV, MP3 u OGG
 2. **Analiza** — Pulsa **Ejecutar** para procesar el audio
 3. **Reproduce** — Pulsa **Play** para ver la identidad visual en tiempo real
-4. **Exporta** — Usa **Ver HTML** o **Exportar** para guardar la identidad generada (PNG, JSON, tokens, etc.)
+4. **Exporta** — Usa **Exportar** para descargar:
+   - **HTML con identidad visual** — Página completa con paleta, tipografía, espacios y componentes
+   - **Informe HTML** — Resumen de variables del análisis
+   - **JSON tokens** — Tokens de diseño en formato JSON
+   - **CSS custom properties** — Variables CSS listas para usar
+
+**Consejo:** Exporta el HTML mientras la canción suena o con el tema congelado para capturar el estado visual exacto.
 
 ## 🏗️ Estructura del proyecto
 
 ```
-syx--music-identity-engine/
+syx-music-identity-engine/
 ├── app/              # Interfaz principal (HTML, JS, widgets)
 ├── engine/           # Motor: pipeline, análisis, semántica, identidad visual
 │   ├── analysis/     # Extracción de features de audio
@@ -57,18 +64,18 @@ syx--music-identity-engine/
 │   └── tokens/       # Token foundations y traducción SYX
 ├── syx-ui/           # Sistema de diseño (CSS, temas, componentes)
 ├── docs/             # Documentación técnica
-├── data/             # Archivos de prueba (audio, letras)
 └── package.json
 ```
 
 ## 🎨 Tecnologías
 
-- **Meyda** — Extracción de features de audio (espectro, MFCC, etc.)
-- **D3.js** — Visualizaciones
+- **Web Audio API** — Decodificación y análisis de audio
+- **Meyda** — Features espectrales (chroma, MFCC) para detección de tonalidad
+- **web-audio-beat-detector** — Detección de BPM
+- **D3.js** — Visualizaciones y gráficos
 - **Chart.js** — Gráficos de evolución
-- **GSAP** — Animaciones
 - **Three.js** — Escena 3D opcional
-- **Lucide** — Iconos
+- **Google Fonts** — Tipografías para la identidad visual
 
 ## 📄 Documentación
 
